@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Media Player Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Custom Theme -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: "#0b1220",
+                        panel: "#10192e",
+                        accent: "#7c3aed"
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-bg text-white font-sans">
+
+    <div class="flex h-screen">
+
+        <!-- Sidebar -->
+        <aside class="w-64 bg-panel p-6 hidden md:block">
+            <h1 class="text-2xl font-bold mb-8">🎵 MediaPlayer</h1>
+
+            <nav class="space-y-4 text-gray-300">
+                <a href="#" class="flex items-center gap-3 text-accent font-semibold">🏠 Home</a>
+                <a href="#" class="flex items-center gap-3 hover:text-white">📚 Library</a>
+                <a href="#" class="flex items-center gap-3 hover:text-white">🎧 Playlists</a>
+                <a href="#" class="flex items-center gap-3 hover:text-white">⬇ Downloads</a>
+                <a href="#" class="flex items-center gap-3 hover:text-white">⚙ Settings</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto p-8">
+
+            <!-- Top Bar -->
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-10">
+                <input type="text" placeholder="Search music, videos..."
+                    class="w-full md:w-96 bg-panel px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent" />
+
+                <div class="flex gap-3">
+                    <button class="bg-accent px-4 py-2 rounded-lg hover:opacity-90">Upload</button>
+                    <button class="bg-panel px-4 py-2 rounded-lg">🌙</button>
+                </div>
+            </div>
+
+            <!-- Hero -->
+            <section class="mb-10">
+                <h2 class="text-4xl font-bold mb-3">Your Ultimate Media Player</h2>
+                <p class="text-gray-400 max-w-3xl">
+                    Enjoy smooth playback of music & videos with playlists, downloads,
+                    multi-language support, and an Apple-like experience.
+                </p>
+
+                <div class="mt-6 flex gap-4">
+                    <button class="bg-accent px-6 py-3 rounded-lg font-semibold">
+                        ▶ Start Playing
+                    </button>
+                    <button class="bg-panel px-6 py-3 rounded-lg">
+                        ⬇ Download Media
+                    </button>
+                </div>
+            </section>
+
+            <!-- Stats -->
+            <section class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+                <div class="bg-panel p-6 rounded-xl text-center">
+                    <p class="text-gray-400">Total Media</p>
+                    <h3 class="text-3xl font-bold">0</h3>
+                </div>
+                <div class="bg-panel p-6 rounded-xl text-center">
+                    <p class="text-gray-400">Playlists</p>
+                    <h3 class="text-3xl font-bold">0</h3>
+                </div>
+                <div class="bg-panel p-6 rounded-xl text-center">
+                    <p class="text-gray-400">Downloads</p>
+                    <h3 class="text-3xl font-bold">0</h3>
+                </div>
+                <div class="bg-panel p-6 rounded-xl text-center">
+                    <p class="text-gray-400">Recently Played</p>
+                    <h3 class="text-3xl font-bold">0</h3>
+                </div>
+            </section>
+
+            <!-- Quick Actions -->
+            <section class="mb-12">
+                <h3 class="text-2xl font-semibold mb-4">⚡ Quick Actions</h3>
+                <div class="flex flex-wrap gap-4">
+                    <button class="bg-panel px-5 py-3 rounded-lg hover:bg-accent">Upload Media</button>
+                    <button class="bg-panel px-5 py-3 rounded-lg hover:bg-accent">Create Playlist</button>
+                    <button class="bg-panel px-5 py-3 rounded-lg hover:bg-accent">Download Video</button>
+                </div>
+            </section>
+
+            <!-- Recently Played -->
+            <section>
+                <h3 class="text-2xl font-semibold mb-4">🎶 Recently Played</h3>
+                <div class="bg-panel p-8 rounded-xl text-center text-gray-400">
+                    No recently played media<br />
+                    <span class="text-sm">Start playing music or videos</span>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+</body>
+
+</html>

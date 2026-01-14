@@ -8,6 +8,20 @@ export default {
   theme: {
     extend: {
       colors: {
+        bg: "#0b1220",
+        panel: "#10192e",
+        accent: {
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#1d4ed8',
+          600: '#2563eb',
+          700: '#1e40af',
+          800: '#1e3a8a',
+          900: '#172554',
+        },
         primary: {
           50: '#f0f9ff',
           100: '#e0f2fe',

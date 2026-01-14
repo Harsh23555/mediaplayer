@@ -7,10 +7,10 @@ const Home = () => {
     const { theme } = useSelector((state) => state.theme);
 
     const stats = [
-        { label: 'Total Media', value: '0', icon: Music, color: 'bg-blue-500' },
-        { label: 'Playlists', value: '0', icon: Play, color: 'bg-purple-500' },
-        { label: 'Downloads', value: '0', icon: Video, color: 'bg-green-500' },
-        { label: 'Recently Played', value: '0', icon: TrendingUp, color: 'bg-orange-500' },
+        { label: 'Total Media', value: '0', icon: Music, color: 'bg-accent-300' },
+        { label: 'Playlists', value: '0', icon: Play, color: 'bg-accent-400' },
+        { label: 'Downloads', value: '0', icon: Video, color: 'bg-accent-500' },
+        { label: 'Recently Played', value: '0', icon: TrendingUp, color: 'bg-accent-600' },
     ];
 
     return (
