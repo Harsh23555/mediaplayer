@@ -1,35 +1,84 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Settings as SettingsIcon, Moon, Sun, Volume2, Gauge } from 'lucide-react';
+import { Settings as SettingsIcon, Moon, Sun, Volume2, Gauge, FolderOpen, CheckCircle, AlertCircle, X } from 'lucide-react';
 import { toggleTheme, setSubtitleSize, setAutoplay } from '../store/slices/themeSlice';
+import { setPermissionGranted, setLocalFiles, setScanningState, setScanError, addFolder, removeFolder } from '../store/slices/localStorageSlice';
+import { requestLocalStoragePermission, scanDirectory } from '../utils/localStorageUtils';
 
 const Settings = () => {
     const dispatch = useDispatch();
-    const { theme, subtitleSize, autoplay, quality } = useSelector((state) => state.theme);
+    const { theme, subtitleSize, autoplay } = useSelector((state) => state.theme);
+    const { permission, scanning, scanError, localFiles, folders } = useSelector((state) => state.localStorage);
+    const [requestError, setRequestError] = useState(null);
+    const [successMessage, setSuccessMessage] = useState(null);
+
+    const handleRequestPermission = async () => {
+        setRequestError(null);
+        setSuccessMessage(null);
+        dispatch(setScanningState(true));
+
+        try {
+            const dirHandle = await requestLocalStoragePermission();
+            const folderId = `folder_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+
+            // Scan the directory
+            const mediaFiles = await scanDirectory(dirHandle, [], 5, 0, folderId);
+
+            if (mediaFiles.length === 0) {
+                setSuccessMessage('No supported media files found in the selected directory.');
+            } else {
+                setSuccessMessage(`Found ${mediaFiles.length} files in "${dirHandle.name}".`);
+            }
+
+            dispatch(setPermissionGranted(true));
+
+            // Add folder
+            dispatch(addFolder({
+                id: folderId,
+                name: dirHandle.name,
+                fileCount: mediaFiles.length,
+                handle: dirHandle
+            }));
+
+            // Append files to existing list
+            const newFilesList = [...localFiles, ...mediaFiles];
+            dispatch(setLocalFiles(newFilesList));
+
+        } catch (err) {
+            const errorMsg = err.message || 'Failed to request permission';
+            setRequestError(errorMsg);
+            dispatch(setScanError(errorMsg));
+        } finally {
+            dispatch(setScanningState(false));
+        }
+    };
 
     return (
         <div className="space-y-6">
             {/* Header */}
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-gray-100">
                 Settings
             </h1>
 
             {/* Appearance */}
             <div className="card p-6">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <h2 className="text-xl font-semibold text-gray-100 mb-4 flex items-center gap-2">
                     <Moon className="w-5 h-5" />
                     Appearance
                 </h2>
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="font-medium text-gray-900 dark:text-white">Theme</p>
+                            <p className="font-medium text-gray-100">Theme</p>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                                 Choose your preferred theme
                             </p>
                         </div>
                         <button
-                            onClick={() => dispatch(toggleTheme())}
+                            onClick={() => {
+                                console.log('Settings: toggleTheme clicked, current theme:', theme);
+                                dispatch(toggleTheme());
+                            }}
                             className="btn btn-secondary flex items-center gap-2"
                         >
                             {theme === 'dark' ? (
@@ -50,14 +99,14 @@ const Settings = () => {
 
             {/* Playback */}
             <div className="card p-6">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <h2 className="text-xl font-semibold text-gray-100 mb-4 flex items-center gap-2">
                     <Volume2 className="w-5 h-5" />
                     Playback
                 </h2>
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="font-medium text-gray-900 dark:text-white">Autoplay</p>
+                            <p className="font-medium text-gray-100">Autoplay</p>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                                 Automatically play next track
                             </p>
@@ -74,7 +123,7 @@ const Settings = () => {
                     </div>
 
                     <div>
-                        <label className="block font-medium text-gray-900 dark:text-white mb-2">
+                        <label className="block font-medium text-gray-100 mb-2">
                             Default Quality
                         </label>
                         <select className="input">
@@ -90,12 +139,12 @@ const Settings = () => {
 
             {/* Subtitles */}
             <div className="card p-6">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                <h2 className="text-xl font-semibold text-gray-100 mb-4">
                     Subtitles
                 </h2>
                 <div className="space-y-4">
                     <div>
-                        <label className="block font-medium text-gray-900 dark:text-white mb-2">
+                        <label className="block font-medium text-gray-100 mb-2">
                             Subtitle Size
                         </label>
                         <select
@@ -108,6 +157,75 @@ const Settings = () => {
                             <option value="large">Large</option>
                             <option value="xlarge">Extra Large</option>
                         </select>
+                    </div>
+                </div>
+            </div>
+
+            {/* Local Storage Access */}
+            <div className="card p-6">
+                <h2 className="text-xl font-semibold text-gray-100 mb-4 flex items-center gap-2">
+                    <FolderOpen className="w-5 h-5" />
+                    Manage Library Folders
+                </h2>
+                <div className="space-y-4">
+                    <div className="bg-gray-900 dark:bg-dark-700 p-4 rounded-lg border border-gray-800 dark:border-gray-700">
+                        {/* Folder List */}
+                        {folders && folders.length > 0 ? (
+                            <div className="space-y-3 mb-4">
+                                {folders.map((folder) => (
+                                    <div key={folder.id} className="flex items-center justify-between bg-gray-800 p-3 rounded-lg">
+                                        <div className="flex items-center gap-3">
+                                            <FolderOpen className="w-5 h-5 text-blue-400" />
+                                            <div>
+                                                <p className="font-medium text-gray-100">{folder.name}</p>
+                                                <p className="text-xs text-gray-400">{folder.fileCount} files scanned</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => dispatch(removeFolder(folder.id))}
+                                            className="text-red-400 hover:text-red-300 p-2"
+                                            title="Remove folder"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6 text-gray-400">
+                                <p>No folders added yet. Add folders to build your library.</p>
+                            </div>
+                        )}
+
+                        {requestError && (
+                            <div className="bg-red-900/20 border border-red-800 text-red-300 p-3 rounded-lg mb-4 text-sm">
+                                ⚠️ {requestError}
+                            </div>
+                        )}
+
+                        {successMessage && (
+                            <div className="bg-green-900/20 border border-green-800 text-green-300 p-3 rounded-lg mb-4 text-sm">
+                                ✓ {successMessage}
+                            </div>
+                        )}
+
+                        <button
+                            onClick={handleRequestPermission}
+                            disabled={scanning}
+                            className={`btn btn-primary w-full flex items-center justify-center gap-2 ${scanning ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
+                        >
+                            <FolderOpen className="w-4 h-4" />
+                            {scanning ? 'Scanning...' : 'Add Folder'}
+                        </button>
+                    </div>
+
+                    <div className="text-xs text-gray-500 space-y-1">
+                        <p>📝 <strong>Supported formats:</strong></p>
+                        <p className="ml-4">🎬 Video: mp4, webm, mkv... (Metadata only)</p>
+                        <p className="ml-4">🎵 Audio: mp3, wav, flac...</p>
+                        <p className="ml-4">🖼️ Image: jpg, png, webp...</p>
+                        <p className="ml-4">📄 Document: pdf, txt...</p>
                     </div>
                 </div>
             </div>

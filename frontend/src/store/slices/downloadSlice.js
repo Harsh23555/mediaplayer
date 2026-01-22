@@ -9,6 +9,10 @@ const downloadSlice = createSlice({
     name: 'downloads',
     initialState,
     reducers: {
+        setDownloads: (state, action) => {
+            state.downloads = action.payload;
+            state.activeDownloads = action.payload.filter(d => d.status === 'downloading').length;
+        },
         addDownload: (state, action) => {
             state.downloads.push({
                 ...action.payload,
@@ -83,6 +87,7 @@ const downloadSlice = createSlice({
 });
 
 export const {
+    setDownloads,
     addDownload,
     updateDownload,
     setDownloadProgress,

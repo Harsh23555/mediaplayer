@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responsive HTML5 Media Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .player-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+
+        /* File Upload Section */
+        .upload-section {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .upload-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 1rem 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .upload-button:active {
+            transform: translateY(0);
+        }
+
+        .file-info {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f5f5f5;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #666;
+            display: none;
+        }
+
+        .file-info.active {
+            display: block;
+        }
+
+        .file-info strong {
+            color: #333;
+        }
+
+        /* Video Player */
+        .video-player-wrapper {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .video-player {
+            width: 100%;
+            max-height: 500px;
+            display: block;
+            background: #000;
+        }
+
+        .video-player::-webkit-media-controls-panel {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        /* Audio Player */
+        .audio-player-wrapper {
+            margin-bottom: 2rem;
+        }
+
+        .audio-player {
+            width: 100%;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+
+        .audio-player::-webkit-media-controls-panel {
+            background-color: #f9f9f9;
+        }
+
+        /* Controls Section */
+        .controls-section {
+            background: #f9f9f9;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.8rem;
+            font-size: 0.95rem;
+        }
+
+        .control-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }
+
+        .control-btn {
+            padding: 0.7rem 1.2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .control-btn.secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .control-btn.secondary:hover {
+            background: #d0d0d0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Speed Control */
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .speed-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .speed-btn {
+            padding: 0.5rem 0.8rem;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+        }
+
+        .speed-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .speed-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+        }
+
+        /* Format Support Info */
+        .format-info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+            color: #1565c0;
+        }
+
+        .format-info strong {
+            color: #0d47a1;
+        }
+
+        /* Browser Support Info */
+        .browser-support {
+            background: #f3e5f5;
+            border-left: 4px solid #9c27b0;
+            padding: 1rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: #6a1b9a;
+        }
+
+        .browser-support strong {
+            color: #4a148c;
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .status-message.show {
+            display: block;
+        }
+
+        .status-message.success {
+            background: #c8e6c9;
+            border-left: 4px solid #4caf50;
+            color: #2e7d32;
+        }
+
+        .status-message.error {
+            background: #ffcdd2;
+            border-left: 4px solid #f44336;
+            color: #c62828;
+        }
+
+        .status-message.warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            color: #856404;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .header p {
+                font-size: 0.9rem;
+            }
+
+            .player-section {
+                padding: 1.5rem;
+            }
+
+            .section-title {
+                font-size: 1.1rem;
+            }
+
+            .control-btn {
+                min-width: 100px;
+                padding: 0.6rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .speed-control {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .speed-buttons {
+                width: 100%;
+            }
+
+            .speed-btn {
+                flex: 1;
+                min-width: calc(25% - 0.4rem);
+            }
+
+            .video-player {
+                max-height: 300px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 0.5rem;
+            }
+
+            .header h1 {
+                font-size: 1.3rem;
+            }
+
+            .player-section {
+                padding: 1rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .section-title {
+                font-size: 1rem;
+                margin-bottom: 1rem;
+            }
+
+            .control-btn {
+                min-width: 100%;
+                padding: 0.7rem 1rem;
+            }
+
+            .control-buttons {
+                flex-direction: column;
+            }
+
+            .speed-btn {
+                flex: 1;
+                min-width: calc(25% - 0.4rem);
+            }
+
+            .video-player {
+                max-height: 250px;
+            }
+
+            .format-info,
+            .browser-support {
+                font-size: 0.85rem;
+                padding: 0.8rem;
+            }
+        }
+
+        /* Accessibility */
+        .control-btn:focus,
+        .speed-btn:focus,
+        .upload-button:focus {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+
+        /* No Media Fallback */
+        .no-media {
+            text-align: center;
+            padding: 2rem;
+            background: #f5f5f5;
+            border-radius: 8px;
+            color: #999;
+            margin-bottom: 1rem;
+        }
+
+        .no-media-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 Responsive HTML5 Media Player</h1>
+            <p>Play audio and video files directly in your browser</p>
+        </div>
+
+        <!-- Video Player Section -->
+        <div class="player-section">
+            <div class="section-title">Video Player</div>
+            
+            <div id="statusMessage" class="status-message"></div>
+
+            <div class="upload-wrapper">
+                <label for="videoFile" class="upload-button">
+                    <span>📁 Choose Video File</span>
+                </label>
+                <input 
+                    type="file" 
+                    id="videoFile" 
+                    class="file-input" 
+                    accept="video/mp4,video/webm,video/ogg"
+                >
+            </div>
+
+            <div id="videoFileInfo" class="file-info"></div>
+
+            <div class="video-player-wrapper" id="videoWrapper" style="display: none;">
+                <video 
+                    id="videoPlayer" 
+                    class="video-player"
+                    controls
+                    controlsList="nodownload"
+                >
+                    <source src="" type="">
+                    <p>Your browser does not support HTML5 video. Please use a modern browser like Chrome, Firefox, Safari, or Edge.</p>
+                </video>
+            </div>
+
+            <div id="noVideoMessage" class="no-media">
+                <div class="no-media-icon">🎬</div>
+                <p>No video loaded. Upload a video file to get started.</p>
+            </div>
+
+            <div class="format-info">
+                <strong>Supported Formats:</strong> MP4 (H.264), WebM (VP8/VP9), Ogg Theora
+            </div>
+
+            <div class="controls-section">
+                <div class="control-group">
+                    <label class="control-label">Playback Controls</label>
+                    <div class="control-buttons">
+                        <button class="control-btn" onclick="playVideo()" id="playVideoBtn">▶ Play</button>
+                        <button class="control-btn" onclick="pauseVideo()" id="pauseVideoBtn">⏸ Pause</button>
+                        <button class="control-btn" onclick="stopVideo()" id="stopVideoBtn">⏹ Stop</button>
+                        <button class="control-btn secondary" onclick="toggleVideoFullscreen()" id="fullscreenVideoBtn">⛶ Fullscreen</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Speed Control</label>
+                    <div class="speed-control">
+                        <div class="speed-buttons">
+                            <button class="speed-btn" onclick="setVideoSpeed(0.5)">0.5x</button>
+                            <button class="speed-btn" onclick="setVideoSpeed(0.75)">0.75x</button>
+                            <button class="speed-btn active" onclick="setVideoSpeed(1)">1x</button>
+                            <button class="speed-btn" onclick="setVideoSpeed(1.25)">1.25x</button>
+                            <button class="speed-btn" onclick="setVideoSpeed(1.5)">1.5x</button>
+                            <button class="speed-btn" onclick="setVideoSpeed(2)">2x</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Volume Control</label>
+                    <div class="control-buttons">
+                        <button class="control-btn secondary" onclick="muteVideo()">🔇 Mute</button>
+                        <button class="control-btn secondary" onclick="unmuteVideo()">🔊 Unmute</button>
+                        <button class="control-btn secondary" onclick="setVideoVolume(0.5)">Volume 50%</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audio Player Section -->
+        <div class="player-section">
+            <div class="section-title">Audio Player</div>
+
+            <div class="upload-wrapper">
+                <label for="audioFile" class="upload-button">
+                    <span>📁 Choose Audio File</span>
+                </label>
+                <input 
+                    type="file" 
+                    id="audioFile" 
+                    class="file-input" 
+                    accept="audio/mpeg,audio/wav,audio/ogg,audio/webm"
+                >
+            </div>
+
+            <div id="audioFileInfo" class="file-info"></div>
+
+            <div id="audioWrapper" style="display: none;">
+                <audio 
+                    id="audioPlayer" 
+                    class="audio-player"
+                    controls
+                    controlsList="nodownload"
+                >
+                    <source src="" type="">
+                    <p>Your browser does not support HTML5 audio. Please use a modern browser like Chrome, Firefox, Safari, or Edge.</p>
+                </audio>
+            </div>
+
+            <div id="noAudioMessage" class="no-media">
+                <div class="no-media-icon">🎵</div>
+                <p>No audio loaded. Upload an audio file to get started.</p>
+            </div>
+
+            <div class="format-info">
+                <strong>Supported Formats:</strong> MP3, WAV, OGG Vorbis, WebM Audio
+            </div>
+
+            <div class="controls-section">
+                <div class="control-group">
+                    <label class="control-label">Playback Controls</label>
+                    <div class="control-buttons">
+                        <button class="control-btn" onclick="playAudio()">▶ Play</button>
+                        <button class="control-btn" onclick="pauseAudio()">⏸ Pause</button>
+                        <button class="control-btn" onclick="stopAudio()">⏹ Stop</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Speed Control</label>
+                    <div class="speed-control">
+                        <div class="speed-buttons">
+                            <button class="speed-btn" onclick="setAudioSpeed(0.5)">0.5x</button>
+                            <button class="speed-btn" onclick="setAudioSpeed(0.75)">0.75x</button>
+                            <button class="speed-btn active" onclick="setAudioSpeed(1)">1x</button>
+                            <button class="speed-btn" onclick="setAudioSpeed(1.25)">1.25x</button>
+                            <button class="speed-btn" onclick="setAudioSpeed(1.5)">1.5x</button>
+                            <button class="speed-btn" onclick="setAudioSpeed(2)">2x</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Volume Control</label>
+                    <div class="control-buttons">
+                        <button class="control-btn secondary" onclick="muteAudio()">🔇 Mute</button>
+                        <button class="control-btn secondary" onclick="unmuteAudio()">🔊 Unmute</button>
+                        <button class="control-btn secondary" onclick="setAudioVolume(0.5)">Volume 50%</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Browser Support Info -->
+        <div class="player-section">
+            <div class="section-title">Browser Compatibility</div>
+            
+            <div class="browser-support">
+                <strong>✓ Supported Browsers:</strong>
+                <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                    <li>Chrome 4+</li>
+                    <li>Firefox 3.5+</li>
+                    <li>Safari 3.1+</li>
+                    <li>Edge (all versions)</li>
+                    <li>Opera 10.5+</li>
+                    <li>Mobile Safari (iOS 3.2+)</li>
+                    <li>Chrome for Android</li>
+                </ul>
+            </div>
+
+            <div style="background: #f3e5f5; border-left: 4px solid #9c27b0; padding: 1rem; border-radius: 4px; color: #6a1b9a; font-size: 0.9rem; margin-bottom: 1rem;">
+                <strong>Troubleshooting Video Playback:</strong>
+                <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                    <li>✓ Check browser console (F12) for detailed error messages</li>
+                    <li>✓ Try uploading a standard MP4 file first to test compatibility</li>
+                    <li>✓ Ensure your browser supports the video codec (check console on page load)</li>
+                    <li>✓ Try a different video format if one fails (MP4 is most compatible)</li>
+                    <li>✓ Check file size - very large files may take time to load</li>
+                    <li>✓ Ensure adequate disk space for video processing</li>
+                </ul>
+            </div>
+
+            <div style="background: #f0f4c3; border-left: 4px solid #827717; padding: 1rem; border-radius: 4px; color: #558b2f; font-size: 0.9rem;">
+                <strong>Note:</strong> This player uses native HTML5 audio and video elements with no external dependencies. The built-in browser controls provide a consistent experience across all devices.
+            </div>
+        </div>
+
+        <!-- File Picker API Demo Section -->
+        <div class="player-section">
+            <div class="section-title">File Picker API Demo</div>
+            
+            <p style="margin-bottom: 1.5rem; color: #666;">
+                Modern approach using the File Picker API with Object URLs for secure, sandboxed media playback:
+            </p>
+
+            <div class="upload-wrapper" style="margin-bottom: 1.5rem;">
+                <button class="upload-button" id="pickFileBtn">
+                    <span>📂 Open File Picker</span>
+                </button>
+            </div>
+
+            <div id="pickerFileInfo" class="file-info"></div>
+
+            <div id="pickerMediaWrapper" style="display: none;">
+                <video 
+                    id="pickerVideo" 
+                    class="video-player"
+                    controls
+                    style="width: 100%; max-height: 400px; background: #000; border-radius: 8px; margin-bottom: 1rem;"
+                >
+                    <p>Your browser does not support HTML5 video.</p>
+                </video>
+                <audio 
+                    id="pickerAudio" 
+                    class="audio-player"
+                    controls
+                    style="width: 100%; margin-bottom: 1rem;"
+                >
+                    <p>Your browser does not support HTML5 audio.</p>
+                </audio>
+            </div>
+
+            <div id="noPickerMedia" class="no-media">
+                <div class="no-media-icon">📂</div>
+                <p>Click "Open File Picker" to select a video or audio file.</p>
+            </div>
+
+            <div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 1rem; border-radius: 4px; font-size: 0.9rem; color: #2e7d32; margin-top: 1.5rem;">
+                <strong>✓ Benefits of File Picker API:</strong>
+                <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                    <li>Secure access to user files through browser sandbox</li>
+                    <li>No server upload required - plays locally via Object URLs</li>
+                    <li>Works with large files without memory issues</li>
+                    <li>Object URLs are automatically revoked when no longer needed</li>
+                    <li>Supports all modern browsers (Chrome, Firefox, Safari, Edge)</li>
+                    <li>Full HTML5 media controls and native player features</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🎵 Responsive HTML5 Media Player • Works without external libraries or plugins</p>
+            <p>All playback is handled by your browser's native HTML5 support</p>
+        </div>
+    </div>
+
+    <script>
+        // ==================== UTILITY FUNCTIONS ====================
+        
+        function showStatus(message, type = 'info') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status-message show ${type}`;
+            setTimeout(() => statusEl.classList.remove('show'), 5000);
+        }
+
+        function getMediaType(filename) {
+            const ext = filename.toLowerCase().split('.').pop();
+            const mimeTypes = {
+                'mp4': 'video/mp4; codecs="avc1.42E01E"',
+                'webm': 'video/webm',
+                'ogv': 'video/ogg',
+                'ogg': 'video/ogg',
+                'mp3': 'audio/mpeg',
+                'wav': 'audio/wav',
+                'oga': 'audio/ogg',
+                'm4a': 'audio/mp4'
+            };
+            return mimeTypes[ext] || '';
+        }
+
+        function checkVideoCodecSupport(video) {
+            const codecs = [
+                'video/mp4; codecs="avc1.42E01E"',
+                'video/mp4',
+                'video/webm',
+                'video/ogg'
+            ];
+            
+            const supportedCodecs = {};
+            codecs.forEach(codec => {
+                const support = video.canPlayType(codec);
+                supportedCodecs[codec] = support;
+            });
+            
+            return supportedCodecs;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function formatDuration(seconds) {
+            if (!seconds || isNaN(seconds)) return '0:00';
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            
+            if (hours > 0) {
+                return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+            return `${minutes}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // ==================== VIDEO PLAYER FUNCTIONS ====================
+
+        document.getElementById('videoFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const mimeType = getMediaType(file.name);
+            if (!mimeType || !mimeType.includes('video')) {
+                showStatus('Please select a valid video file (MP4, WebM, OGG)', 'error');
+                return;
+            }
+
+            const url = URL.createObjectURL(file);
+            const videoPlayer = document.getElementById('videoPlayer');
+            const source = videoPlayer.querySelector('source');
+            
+            // Reset player state
+            videoPlayer.pause();
+            videoPlayer.currentTime = 0;
+            
+            source.src = url;
+            source.type = mimeType;
+            
+            // Add event listeners for better error handling
+            videoPlayer.onerror = function(e) {
+                console.error('❌ Video Error:', e);
+                console.error('Error Code:', videoPlayer.error?.code);
+                console.error('Error Message:', videoPlayer.error?.message);
+                
+                const errorMessages = {
+                    1: 'Loading aborted by user',
+                    2: 'Network error while loading video',
+                    3: 'Decoding failed - unsupported format',
+                    4: 'Video format not supported by browser'
+                };
+                
+                const errorMsg = errorMessages[videoPlayer.error?.code] || 'Unknown playback error';
+                showStatus(`❌ Video Error: ${errorMsg}`, 'error');
+            };
+
+            videoPlayer.addEventListener('loadstart', function() {
+                console.log('📹 Loading video...');
+                showStatus('Loading video file...', 'info');
+            }, { once: true });
+
+            videoPlayer.addEventListener('loadedmetadata', function() {
+                console.log('✓ Video metadata loaded');
+                console.log('Duration:', formatDuration(videoPlayer.duration));
+                console.log('Codec Support:', checkVideoCodecSupport(videoPlayer));
+                showStatus('✓ Video ready to play', 'success');
+            }, { once: true });
+
+            videoPlayer.addEventListener('canplay', function() {
+                console.log('✓ Video can play');
+            }, { once: true });
+
+            videoPlayer.load();
+
+            document.getElementById('videoWrapper').style.display = 'block';
+            document.getElementById('noVideoMessage').style.display = 'none';
+
+            const fileInfo = document.getElementById('videoFileInfo');
+            fileInfo.innerHTML = `
+                <strong>File:</strong> ${file.name} | 
+                <strong>Size:</strong> ${formatFileSize(file.size)} | 
+                <strong>Type:</strong> ${file.type || 'Unknown'} | 
+                <strong>MIME Type:</strong> ${mimeType}
+            `;
+            fileInfo.classList.add('active');
+
+            showStatus(`Video loaded: ${file.name}`, 'success');
+        });
+
+        function playVideo() {
+            const video = document.getElementById('videoPlayer');
+            
+            if (!video.src && !video.querySelector('source').src) {
+                showStatus('❌ No video loaded. Please upload a video file first.', 'error');
+                return;
+            }
+
+            console.log('▶ Attempting to play video');
+            console.log('Video src:', video.src || video.querySelector('source').src);
+            console.log('Video readyState:', video.readyState);
+            console.log('Network state:', video.networkState);
+            
+            const playPromise = video.play();
+            
+            if (playPromise !== undefined) {
+                playPromise
+                    .then(() => {
+                        console.log('✓ Video playing');
+                        showStatus('▶ Playing...', 'success');
+                    })
+                    .catch(error => {
+                        console.error('❌ Playback error:', error);
+                        showStatus(`❌ Playback error: ${error.message}`, 'error');
+                    });
+            }
+        }
+
+        function pauseVideo() {
+            document.getElementById('videoPlayer').pause();
+        }
+
+        function stopVideo() {
+            const video = document.getElementById('videoPlayer');
+            video.pause();
+            video.currentTime = 0;
+        }
+
+        function setVideoSpeed(speed) {
+            document.getElementById('videoPlayer').playbackRate = speed;
+            
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            showStatus(`Video speed: ${speed}x`, 'success');
+        }
+
+        function setVideoVolume(volume) {
+            document.getElementById('videoPlayer').volume = volume;
+            showStatus(`Video volume: ${Math.round(volume * 100)}%`, 'success');
+        }
+
+        function muteVideo() {
+            document.getElementById('videoPlayer').muted = true;
+            showStatus('Video muted', 'success');
+        }
+
+        function unmuteVideo() {
+            document.getElementById('videoPlayer').muted = false;
+            showStatus('Video unmuted', 'success');
+        }
+
+        function toggleVideoFullscreen() {
+            const video = document.getElementById('videoPlayer');
+            const wrapper = document.getElementById('videoWrapper');
+
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else if (wrapper.requestFullscreen) {
+                wrapper.requestFullscreen().catch(e => {
+                    showStatus('Fullscreen unavailable: ' + e.message, 'warning');
+                });
+            } else if (wrapper.webkitRequestFullscreen) {
+                wrapper.webkitRequestFullscreen();
+            }
+        }
+
+        // ==================== AUDIO PLAYER FUNCTIONS ====================
+
+        document.getElementById('audioFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const mimeType = getMediaType(file.name);
+            if (!mimeType || !mimeType.includes('audio')) {
+                showStatus('Please select a valid audio file (MP3, WAV, OGG, WebM)', 'error');
+                return;
+            }
+
+            const url = URL.createObjectURL(file);
+            const audioPlayer = document.getElementById('audioPlayer');
+            const source = audioPlayer.querySelector('source');
+            
+            source.src = url;
+            source.type = mimeType;
+            audioPlayer.load();
+
+            document.getElementById('audioWrapper').style.display = 'block';
+            document.getElementById('noAudioMessage').style.display = 'none';
+
+            const fileInfo = document.getElementById('audioFileInfo');
+            fileInfo.innerHTML = `
+                <strong>File:</strong> ${file.name} | 
+                <strong>Size:</strong> ${formatFileSize(file.size)} | 
+                <strong>Type:</strong> ${file.type}
+            `;
+            fileInfo.classList.add('active');
+
+            showStatus(`Audio loaded: ${file.name}`, 'success');
+        });
+
+        function playAudio() {
+            document.getElementById('audioPlayer').play().catch(e => {
+                showStatus('Error playing audio: ' + e.message, 'error');
+            });
+        }
+
+        function pauseAudio() {
+            document.getElementById('audioPlayer').pause();
+        }
+
+        function stopAudio() {
+            const audio = document.getElementById('audioPlayer');
+            audio.pause();
+            audio.currentTime = 0;
+        }
+
+        function setAudioSpeed(speed) {
+            document.getElementById('audioPlayer').playbackRate = speed;
+            
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            showStatus(`Audio speed: ${speed}x`, 'success');
+        }
+
+        function setAudioVolume(volume) {
+            document.getElementById('audioPlayer').volume = volume;
+            showStatus(`Audio volume: ${Math.round(volume * 100)}%`, 'success');
+        }
+
+        function muteAudio() {
+            document.getElementById('audioPlayer').muted = true;
+            showStatus('Audio muted', 'success');
+        }
+
+        function unmuteAudio() {
+            document.getElementById('audioPlayer').muted = false;
+            showStatus('Audio unmuted', 'success');
+        }
+
+        // ==================== INITIALIZATION ====================
+
+        window.addEventListener('load', function() {
+            // Check browser support
+            const video = document.getElementById('videoPlayer');
+            const audio = document.getElementById('audioPlayer');
+
+            console.log('🎬 Media Player Initializing...');
+            
+            if (!video.canPlayType) {
+                showStatus('Your browser does not support HTML5 video playback', 'warning');
+                console.warn('⚠️ HTML5 video not supported');
+            } else {
+                console.log('✓ HTML5 video supported');
+            }
+
+            if (!audio.canPlayType) {
+                showStatus('Your browser does not support HTML5 audio playback', 'warning');
+                console.warn('⚠️ HTML5 audio not supported');
+            } else {
+                console.log('✓ HTML5 audio supported');
+            }
+
+            // Check video codec support
+            console.log('📹 Video Codec Support:');
+            const videoCodecs = {
+                'MP4 (H.264)': 'video/mp4; codecs="avc1.42E01E"',
+                'WebM (VP8/VP9)': 'video/webm',
+                'Ogg (Theora)': 'video/ogg'
+            };
+            
+            Object.entries(videoCodecs).forEach(([name, codec]) => {
+                const support = video.canPlayType(codec);
+                console.log(`  ${name}: ${support || 'not supported'}`);
+            });
+
+            // Check audio codec support
+            console.log('🎵 Audio Codec Support:');
+            const audioCodecs = {
+                'MP3': 'audio/mpeg',
+                'WAV': 'audio/wav',
+                'OGG Vorbis': 'audio/ogg',
+                'WebM Audio': 'audio/webm'
+            };
+            
+            Object.entries(audioCodecs).forEach(([name, codec]) => {
+                const support = audio.canPlayType(codec);
+                console.log(`  ${name}: ${support || 'not supported'}`);
+            });
+
+            console.log('🎬 Media Player Ready!');
+            console.log('💡 TIP: Check browser console for detailed playback information');
+        });
+
+        // Cleanup object URLs when page unloads
+        window.addEventListener('beforeunload', function() {
+            const video = document.getElementById('videoPlayer');
+            const audio = document.getElementById('audioPlayer');
+            const pickerVideo = document.getElementById('pickerVideo');
+            const pickerAudio = document.getElementById('pickerAudio');
+            
+            if (video.src) URL.revokeObjectURL(video.src);
+            if (audio.src) URL.revokeObjectURL(audio.src);
+            if (pickerVideo.src) URL.revokeObjectURL(pickerVideo.src);
+            if (pickerAudio.src) URL.revokeObjectURL(pickerAudio.src);
+        });
+
+        // ==================== FILE PICKER API ====================
+
+        document.getElementById('pickFileBtn').addEventListener('click', async function() {
+            try {
+                // Create a file picker input dynamically
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'video/*,audio/*';
+                input.addEventListener('change', handleFilePickerChange);
+                
+                // Trigger the file picker
+                input.click();
+            } catch (error) {
+                showStatus(`File picker error: ${error.message}`, 'error');
+                console.error('File Picker Error:', error);
+            }
+        });
+
+        function handleFilePickerChange(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            console.log('📂 File Selected:', {
+                name: file.name,
+                size: formatFileSize(file.size),
+                type: file.type,
+                lastModified: new Date(file.lastModified).toLocaleString()
+            });
+
+            // Create object URL from file
+            const objectUrl = URL.createObjectURL(file);
+            console.log('🔗 Object URL created:', objectUrl);
+
+            // Determine if it's video or audio
+            const isVideo = file.type.startsWith('video/');
+            const isAudio = file.type.startsWith('audio/');
+
+            if (!isVideo && !isAudio) {
+                showStatus('Please select a valid video or audio file', 'error');
+                URL.revokeObjectURL(objectUrl);
+                return;
+            }
+
+            const pickerMediaWrapper = document.getElementById('pickerMediaWrapper');
+            const pickerVideo = document.getElementById('pickerVideo');
+            const pickerAudio = document.getElementById('pickerAudio');
+            const noPickerMedia = document.getElementById('noPickerMedia');
+            const fileInfo = document.getElementById('pickerFileInfo');
+
+            // Reset both players
+            pickerVideo.style.display = 'none';
+            pickerAudio.style.display = 'none';
+            pickerVideo.src = '';
+            pickerAudio.src = '';
+
+            if (isVideo) {
+                pickerVideo.src = objectUrl;
+                pickerVideo.style.display = 'block';
+                
+                pickerVideo.onerror = function() {
+                    showStatus('Error loading video file', 'error');
+                    console.error('Video Error:', pickerVideo.error);
+                };
+
+                pickerVideo.addEventListener('loadedmetadata', function() {
+                    console.log('✓ Video metadata loaded');
+                    console.log('Duration:', formatDuration(pickerVideo.duration));
+                    showStatus('✓ Video ready to play', 'success');
+                }, { once: true });
+            } else if (isAudio) {
+                pickerAudio.src = objectUrl;
+                pickerAudio.style.display = 'block';
+                
+                pickerAudio.onerror = function() {
+                    showStatus('Error loading audio file', 'error');
+                    console.error('Audio Error:', pickerAudio.error);
+                };
+
+                pickerAudio.addEventListener('loadedmetadata', function() {
+                    console.log('✓ Audio metadata loaded');
+                    console.log('Duration:', formatDuration(pickerAudio.duration));
+                    showStatus('✓ Audio ready to play', 'success');
+                }, { once: true });
+            }
+
+            // Show media wrapper and hide placeholder
+            pickerMediaWrapper.style.display = 'block';
+            noPickerMedia.style.display = 'none';
+
+            // Update file info
+            fileInfo.innerHTML = `
+                <strong>File:</strong> ${file.name} | 
+                <strong>Size:</strong> ${formatFileSize(file.size)} | 
+                <strong>Type:</strong> ${file.type || 'Unknown'} | 
+                <strong>Modified:</strong> ${new Date(file.lastModified).toLocaleDateString()}
+            `;
+            fileInfo.classList.add('active');
+
+            showStatus(`${isVideo ? '🎬' : '🎵'} ${file.name} loaded successfully`, 'success');
+        }
+    </script>
+</body>
+</html>

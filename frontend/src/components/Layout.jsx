@@ -1,8 +1,15 @@
-import React from 'react';
+import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
 const Layout = ({ children }) => {
+    const location = useLocation();
+    const isPlayerPage = location.pathname.startsWith('/player');
+
+    if (isPlayerPage) {
+        return <div className="h-screen w-full bg-bg overflow-hidden">{children}</div>;
+    }
+
     return (
         <div className="flex h-screen bg-bg text-white font-sans overflow-hidden">
             <Sidebar />

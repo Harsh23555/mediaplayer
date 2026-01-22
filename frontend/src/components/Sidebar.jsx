@@ -1,5 +1,4 @@
 import React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { NavLink } from 'react-router-dom';
 
 const Sidebar = () => {
@@ -25,9 +24,9 @@ const Sidebar = () => {
                         key={item.path}
                         to={item.path}
                         className={({ isActive }) =>
-                            `flex items-center gap-3 hover:text-white ${isActive
-                                ? 'text-accent-500 font-semibold'
-                                : ''
+                            `flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive
+                                ? 'bg-accent-700 text-white font-semibold'
+                                : 'hover:text-white hover:bg-white/5'
                             }`
                         }
                     >

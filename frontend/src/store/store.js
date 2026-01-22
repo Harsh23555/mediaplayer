@@ -3,6 +3,7 @@ import playerReducer from './slices/playerSlice';
 import playlistReducer from './slices/playlistSlice';
 import downloadReducer from './slices/downloadSlice';
 import themeReducer from './slices/themeSlice';
+import localStorageReducer from './slices/localStorageSlice';
 
 export const store = configureStore({
     reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
         playlist: playlistReducer,
         downloads: downloadReducer,
         theme: themeReducer,
+        localStorage: localStorageReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({

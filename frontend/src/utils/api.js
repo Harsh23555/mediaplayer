@@ -42,7 +42,9 @@ export const mediaAPI = {
     getAll: () => api.get('/media'),
     getById: (id) => api.get(`/media/${id}`),
     upload: (formData) => api.post('/media/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { 
+            'Content-Type': 'multipart/form-data',
+        },
     }),
     delete: (id) => api.delete(`/media/${id}`),
     stream: (id) => `${API_BASE_URL}/media/${id}/stream`,

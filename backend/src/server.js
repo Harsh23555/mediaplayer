@@ -3,8 +3,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
-import mongoose from 'mongoose';
+import { PrismaClient } from '@prisma/client';
 
 // Import routes
 import mediaRoutes from './routes/mediaRoutes.js';
@@ -17,6 +18,10 @@ dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Initialize Prisma Client
+import { prisma } from './prisma.js';
+export { prisma };
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -34,6 +39,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/api/downloads/file', express.static(path.join(os.homedir(), 'Downloads', 'MediaPlayer')));
 
 // Routes
 app.use('/api/media', mediaRoutes);
@@ -60,14 +66,11 @@ app.use((err, req, res, next) => {
 // Database connection
 const connectDB = async () => {
     try {
-        if (process.env.MONGODB_URI) {
-            await mongoose.connect(process.env.MONGODB_URI);
-            console.log('✓ MongoDB connected successfully');
-        } else {
-            console.log('⚠ MongoDB URI not provided - running without database');
-        }
+        // Test the connection
+        await prisma.$queryRaw`SELECT 1`;
+        console.log('✓ PostgreSQL (Neon) connected successfully');
     } catch (error) {
-        console.error('✗ MongoDB connection error:', error.message);
+        console.error('✗ PostgreSQL connection error:', error.message);
         console.log('⚠ Continuing without database connection');
     }
 };
@@ -83,10 +86,18 @@ const startServer = async () => {
         console.log(`✓ Environment: ${process.env.NODE_ENV}`);
         console.log(`✓ API URL: http://localhost:${PORT}/api`);
         console.log(`✓ Health check: http://localhost:${PORT}/api/health`);
+        console.log(`✓ Database: PostgreSQL (Neon)`);
         console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
     });
 };
 
 startServer();
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+    console.log('\n🛑 Shutting down gracefully...');
+    await prisma.$disconnect();
+    process.exit(0);
+});
 
 export default app;

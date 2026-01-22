@@ -15,12 +15,16 @@ const initialState = {
     subtitles: [],
     audioTracks: [],
     quality: 'auto',
+    autoPlay: true,
 };
 
 const playerSlice = createSlice({
     name: 'player',
     initialState,
     reducers: {
+        toggleAutoPlay: (state) => {
+            state.autoPlay = !state.autoPlay;
+        },
         setCurrentMedia: (state, action) => {
             state.currentMedia = action.payload;
             state.currentTime = 0;
@@ -82,6 +86,7 @@ const playerSlice = createSlice({
 });
 
 export const {
+    toggleAutoPlay,
     setCurrentMedia,
     togglePlay,
     setPlaying,

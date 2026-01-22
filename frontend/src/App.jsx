@@ -17,7 +17,7 @@ function App() {
   return (
     <Provider store={store}>
       <Router>
-        <div className="App min-h-screen bg-gray-50 dark:bg-dark-900 transition-colors duration-300">
+        <div className="App min-h-screen bg-bg text-gray-100 transition-colors duration-300">
           <Layout>
             <Routes>
               <Route path="/" element={<Home />} />

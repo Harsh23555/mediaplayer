@@ -1,12 +1,15 @@
 import express from 'express';
-import Download from '../models/Download.js';
+import { prisma } from '../server.js';
+import downloadService from '../services/downloadService.js';
 
 const router = express.Router();
 
 // Get all downloads
 router.get('/', async (req, res) => {
     try {
-        const downloads = await Download.find().sort('-createdAt');
+        const downloads = await prisma.download.findMany({
+            orderBy: { createdAt: 'desc' }
+        });
         res.json(downloads);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -16,10 +19,14 @@ router.get('/', async (req, res) => {
 // Get download by ID
 router.get('/:id', async (req, res) => {
     try {
-        const download = await Download.findById(req.params.id);
+        const download = await prisma.download.findUnique({
+            where: { id: req.params.id }
+        });
+
         if (!download) {
             return res.status(404).json({ error: 'Download not found' });
         }
+
         res.json(download);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -29,25 +36,39 @@ router.get('/:id', async (req, res) => {
 // Initiate download
 router.post('/', async (req, res) => {
     try {
-        const { url, quality, type } = req.body;
+        const { url, quality, type, title } = req.body;
 
         if (!url) {
             return res.status(400).json({ error: 'URL is required' });
         }
 
-        const download = new Download({
-            url,
-            quality: quality || '1080p',
-            type: type || 'video',
-            status: 'pending'
+        const download = await prisma.download.create({
+            data: {
+                url,
+                title: title || 'Untitled',
+                quality: quality || '1080p',
+                type: type || 'video',
+                status: 'pending'
+            }
         });
 
-        await download.save();
-
-        // TODO: Implement actual download logic with ytdl-core or similar
-        // For now, just return the created download
-
         res.status(201).json(download);
+
+        // Trigger background download process
+        try {
+            await downloadService.processDownload(download.id);
+        } catch (error) {
+            console.error('Download process error:', error);
+            // Update download status to failed
+            await prisma.download.update({
+                where: { id: download.id },
+                data: {
+                    status: 'failed',
+                    error: error.message
+                }
+            }).catch(err => console.error('Failed to update download status:', err));
+        }
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -56,7 +77,10 @@ router.post('/', async (req, res) => {
 // Pause download
 router.post('/:id/pause', async (req, res) => {
     try {
-        const download = await Download.findById(req.params.id);
+        const download = await prisma.download.findUnique({
+            where: { id: req.params.id }
+        });
+
         if (!download) {
             return res.status(404).json({ error: 'Download not found' });
         }
@@ -65,10 +89,12 @@ router.post('/:id/pause', async (req, res) => {
             return res.status(400).json({ error: 'Download is not in progress' });
         }
 
-        download.status = 'paused';
-        await download.save();
+        const updated = await prisma.download.update({
+            where: { id: req.params.id },
+            data: { status: 'paused' }
+        });
 
-        res.json(download);
+        res.json(updated);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -77,7 +103,10 @@ router.post('/:id/pause', async (req, res) => {
 // Resume download
 router.post('/:id/resume', async (req, res) => {
     try {
-        const download = await Download.findById(req.params.id);
+        const download = await prisma.download.findUnique({
+            where: { id: req.params.id }
+        });
+
         if (!download) {
             return res.status(404).json({ error: 'Download not found' });
         }
@@ -86,10 +115,12 @@ router.post('/:id/resume', async (req, res) => {
             return res.status(400).json({ error: 'Download is not paused' });
         }
 
-        download.status = 'downloading';
-        await download.save();
+        const updated = await prisma.download.update({
+            where: { id: req.params.id },
+            data: { status: 'downloading' }
+        });
 
-        res.json(download);
+        res.json(updated);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -98,15 +129,20 @@ router.post('/:id/resume', async (req, res) => {
 // Cancel download
 router.delete('/:id', async (req, res) => {
     try {
-        const download = await Download.findById(req.params.id);
+        const download = await prisma.download.findUnique({
+            where: { id: req.params.id }
+        });
+
         if (!download) {
             return res.status(404).json({ error: 'Download not found' });
         }
 
-        download.status = 'cancelled';
-        await download.save();
+        const updated = await prisma.download.update({
+            where: { id: req.params.id },
+            data: { status: 'cancelled' }
+        });
 
-        res.json({ message: 'Download cancelled successfully' });
+        res.json({ message: 'Download cancelled successfully', download: updated });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

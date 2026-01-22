@@ -82,3 +82,34 @@ export const throttle = (func, limit) => {
         }
     };
 };
+
+export const getMediaThumbnail = (mediaType) => {
+    return mediaType === 'video'
+        ? 'https://via.placeholder.com/300x200?text=Video'
+        : 'https://via.placeholder.com/200x200?text=Music';
+};
+
+export const formatBitrate = (bitrate) => {
+    if (!bitrate) return 'N/A';
+    if (bitrate >= 1000000) {
+        return `${(bitrate / 1000000).toFixed(1)} Mbps`;
+    }
+    return `${(bitrate / 1000).toFixed(0)} kbps`;
+};
+
+export const isTouchDevice = () => {
+    return (
+        (typeof window !== 'undefined' &&
+            ('ontouchstart' in window ||
+                navigator.maxTouchPoints > 0 ||
+                navigator.msMaxTouchPoints > 0))
+    );
+};
+
+export const canPictureInPicture = () => {
+    return 'pictureInPictureEnabled' in document;
+};
+
+export const canBackgroundPlay = () => {
+    return 'mediaSession' in navigator;
+};

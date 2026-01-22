@@ -109,16 +109,6 @@ function PlayerDemo() {
           />
         </div>
 
-        <div className="hero">
-          <h1>Your Ultimate Media Player</h1>
-          <p>
-            Smooth music & video playback with subtitles, live language change
-            and downloads.
-          </p>
-          <button>▶ Start Playing</button>
-          <button onClick={startDownload}>⬇ Download Media</button>
-        </div>
-
         <div className="stats">
           <div className="stat"><h2>{total}</h2><p>Total Media</p></div>
           <div className="stat"><h2>0</h2><p>Playlists</p></div>
@@ -141,7 +131,7 @@ function PlayerDemo() {
           <div className="video-container">
             <video ref={videoRef} controls />
             <div className="controls">
-              <select onChange={changeLanguage}>
+              <select className="input" onChange={changeLanguage}>
                 <option value="en">English</option>
                 <option value="hi">Hindi</option>
                 <option value="es">Spanish</option>
