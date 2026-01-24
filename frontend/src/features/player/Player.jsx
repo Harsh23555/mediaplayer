@@ -21,8 +21,12 @@ import {
     ListMusic,
     ChevronDown,
     RotateCcw,
-    X
+
+    X,
+    Sliders
 } from 'lucide-react';
+import Equalizer from './Equalizer';
+import useAudioEqualizer from '../../hooks/useAudioEqualizer';
 import {
     togglePlay,
     setPlaying,
@@ -84,6 +88,9 @@ const Player = () => {
     const [showCentralIcon, setShowCentralIcon] = useState(false);
     const [centralIconType, setCentralIconType] = useState('play');
     const controlsTimeoutRef = useRef(null);
+    const [showEqualizer, setShowEqualizer] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     const currentTrack = useMemo(() => {
         if (queue && queue.length > currentIndex && currentIndex >= 0) {
@@ -94,6 +101,9 @@ const Player = () => {
 
     const isVideo = currentTrack?.type === 'video';
 
+    // Equalizer Hook
+    const equalizer = useAudioEqualizer(isVideo ? videoRef : audioRef, currentTrack?.id);
+
     // Enable keyboard shortcuts
     useKeyboardShortcuts();
 
@@ -103,22 +113,53 @@ const Player = () => {
         setTimeout(() => setShowCentralIcon(false), 500);
     };
 
-    // Load track URL and handle initial ID
+    // ... (rest of the file) ...
+
+    // Playback control effects
     useEffect(() => {
-        let isMounted = true;
-
-        const syncWithId = async () => {
-            if (!id) return;
-
-            // Check if ID is already in queue
-            const indexInQueue = queue.findIndex(track => track.id === id);
-
-            if (indexInQueue !== -1) {
-                if (currentIndex !== indexInQueue) {
-                    dispatch(setCurrentIndex(indexInQueue));
+        const media = isVideo ? videoRef.current : audioRef.current;
+        if (!media || !currentMediaUrl) return;
+        if (isPlaying) {
+            media.play().catch(err => {
+                // Ignore AbortError which happens when unloading/navigating quickly
+                if (err.name !== 'AbortError') {
+                    console.error('Playback failed:', err);
                 }
-            } else {
-                // If ID is not in queue, fetch media and add it
+            });
+        } else {
+            media.pause();
+        }
+    }, [isPlaying, isVideo, currentMediaUrl]);
+
+    // 1. Sync URL (`id`) -> Redux (`currentIndex`)
+    // Only run when `id` changes (navigation/link click)
+    useEffect(() => {
+        if (!id || !queue.length) {
+            setIsLoading(false);
+            return;
+        }
+
+        const indexInQueue = queue.findIndex(track => track.id === id);
+
+        if (indexInQueue !== -1) {
+            // URL points to valid track in queue -> Sync Redux
+            if (currentIndex !== indexInQueue) {
+                dispatch(setCurrentIndex(indexInQueue));
+            }
+            setIsLoading(false);
+        } else {
+            // URL points to track NOT in queue -> Fetch & Add
+            const fetchAndPlay = async () => {
+                setIsLoading(true);
+                setError(null);
+
+                // If it's a local ID and not in queue, we can't fetch it from backend
+                if (id.startsWith('local_')) {
+                    setError('Local media session expired. Please play again from the library.');
+                    setIsLoading(false);
+                    return;
+                }
+
                 try {
                     const response = await mediaAPI.getById(id);
                     const media = {
@@ -132,12 +173,30 @@ const Player = () => {
                     dispatch(setCurrentIndex(queue.length));
                 } catch (err) {
                     console.error('Failed to fetch media by ID:', err);
+                    setError('Media not found or could not be loaded.');
+                } finally {
+                    setIsLoading(false);
                 }
-            }
-        };
+            };
+            fetchAndPlay();
+        }
+    }, [id, queue.length, dispatch]); // Removed `currentIndex`, `queue` (referencing length is safer to avoid loops)
 
-        syncWithId();
+    // 2. Sync Redux (`currentIndex`) -> URL
+    // When track changes internally (next/prev), update URL
+    useEffect(() => {
+        if (!currentTrack) return;
 
+        // Only navigate if the ID matches a valid track and is different from current URL
+        if (currentTrack.id && currentTrack.id !== id) {
+            navigate(`/player/${currentTrack.id}`, { replace: true });
+        }
+    }, [currentIndex, currentTrack?.id, navigate]); // Removed `id` from dep to avoid fighting
+
+    // 3. Load Media Source
+    // Runs when `currentTrack` changes (either from ID sync or Redux change)
+    useEffect(() => {
+        let isMounted = true;
         const loadUrl = async () => {
             if (!currentTrack) return;
             try {
@@ -145,16 +204,25 @@ const Player = () => {
                 if (currentTrack.source === 'local') {
                     url = await getLocalFileURL(currentTrack);
                 } else if (currentTrack.id) {
-                    url = `http://localhost:5000/api/media/${currentTrack.id}/stream`;
+                    url = mediaAPI.stream(currentTrack.id);
                 }
-                if (isMounted) setCurrentMediaUrl(url);
+
+                if (isMounted) {
+                    if (!url) {
+                        setError('Could not access media file.');
+                    } else {
+                        setCurrentMediaUrl(url);
+                        setError(null); // Clear error on success
+                    }
+                }
             } catch (err) {
                 console.error('Error loading media URL:', err);
+                if (isMounted) setError('Error accessing local file handle. Please re-add the folder or try playing again.');
             }
         };
         loadUrl();
         return () => { isMounted = false; };
-    }, [id, currentTrack, queue, currentIndex, dispatch]);
+    }, [currentTrack]); // Only depend on the track object itself
 
     // Position handles
     useEffect(() => {
@@ -226,7 +294,12 @@ const Player = () => {
         const media = isVideo ? videoRef.current : audioRef.current;
         if (!media || !currentMediaUrl) return;
         if (isPlaying) {
-            media.play().catch(err => console.error('Playback failed:', err));
+            media.play().catch(err => {
+                // Ignore AbortError which happens when unloading/navigating quickly
+                if (err.name !== 'AbortError') {
+                    console.error('Playback failed:', err);
+                }
+            });
         } else {
             media.pause();
         }
@@ -363,8 +436,11 @@ const Player = () => {
                     {isVideo ? (
                         <div className="w-full h-full bg-black">
                             <video
+                                key={currentTrack?.id}
                                 ref={videoRef}
                                 src={currentMediaUrl}
+                                preload="metadata"
+                                crossOrigin={currentMediaUrl?.startsWith('blob:') ? undefined : "anonymous"}
                                 className="w-full h-full object-contain pointer-events-none"
                             />
                         </div>
@@ -389,9 +465,16 @@ const Player = () => {
                                     )}
                                 </div>
                             </div>
-                            <audio ref={audioRef} src={currentMediaUrl} />
+                            <audio ref={audioRef} src={currentMediaUrl} crossOrigin={currentMediaUrl?.startsWith('blob:') ? undefined : "anonymous"} />
                         </motion.div>
                     )}
+
+                    {/* Equalizer Overlay */}
+                    <Equalizer
+                        isOpen={showEqualizer}
+                        onClose={() => setShowEqualizer(false)}
+                        equalizer={equalizer}
+                    />
 
                     {/* Central Animation Icon */}
                     <AnimatePresence>
@@ -411,6 +494,50 @@ const Player = () => {
                             </motion.div>
                         )}
                     </AnimatePresence>
+
+                    {/* Loading/Error State Overlay */}
+                    {(isLoading || error || !currentTrack) && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-50 text-center p-6">
+                            {isLoading ? (
+                                <div className="flex flex-col items-center gap-4">
+                                    <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+                                    <p className="text-gray-400 font-medium">Loading Media...</p>
+                                </div>
+                            ) : error ? (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="max-w-md"
+                                >
+                                    <X className="w-16 h-16 text-red-600 mx-auto mb-4 opacity-50" />
+                                    <h2 className="text-2xl font-bold text-white mb-2">Oops!</h2>
+                                    <p className="text-gray-400 mb-8">{error}</p>
+                                    <button
+                                        onClick={() => navigate('/library')}
+                                        className="px-8 py-3 bg-red-600 text-white rounded-full font-bold hover:bg-red-700 transition-colors shadow-lg"
+                                    >
+                                        Back to Library
+                                    </button>
+                                </motion.div>
+                            ) : (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="max-w-md"
+                                >
+                                    <Music className="w-16 h-16 text-gray-600 mx-auto mb-4 opacity-50" />
+                                    <h2 className="text-2xl font-bold text-white mb-2">No Media Selected</h2>
+                                    <p className="text-gray-400 mb-8">Please select a track from your library to start playing.</p>
+                                    <button
+                                        onClick={() => navigate('/library')}
+                                        className="px-8 py-3 bg-red-600 text-white rounded-full font-bold hover:bg-red-700 transition-colors shadow-lg"
+                                    >
+                                        Go to Library
+                                    </button>
+                                </motion.div>
+                            )}
+                        </div>
+                    )}
                 </main>
 
                 {/* Footer Controls - YouTube Style */}
@@ -514,6 +641,14 @@ const Player = () => {
 
                             <button onClick={handleFullscreen} className="text-white hover:scale-110 transition-transform">
                                 {isFullscreen ? <Minimize className="w-6 h-6" /> : <Maximize className="w-6 h-6" />}
+                            </button>
+
+                            <button
+                                onClick={() => setShowEqualizer(!showEqualizer)}
+                                className={`transition-colors ${showEqualizer ? 'text-red-500' : 'text-white hover:text-white/80'}`}
+                                title="Equalizer"
+                            >
+                                <Sliders className="w-5 h-5" />
                             </button>
                         </div>
                     </div>

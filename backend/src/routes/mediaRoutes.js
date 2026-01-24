@@ -395,13 +395,18 @@ router.get('/local/stream', async (req, res) => {
 
             fs.createReadStream(decodedPath, { start, end }).pipe(res);
         } else {
-            res.header('Content-Length', fileSize);
-            res.header('Content-Type', contentType);
+            res.writeHead(200, {
+                'Content-Length': fileSize,
+                'Content-Type': contentType
+            });
             fs.createReadStream(decodedPath).pipe(res);
         }
     } catch (error) {
         console.error('Stream error:', error);
-        res.status(500).json({ error: error.message });
+        // Only send error if headers haven't been sent yet
+        if (!res.headersSent) {
+            res.status(500).json({ error: error.message });
+        }
     }
 });
 

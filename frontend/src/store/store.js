@@ -17,11 +17,30 @@ export const store = configureStore({
         getDefaultMiddleware({
             serializableCheck: {
                 // Ignore these action types
-                ignoredActions: ['player/setCurrentMedia'],
+                ignoredActions: [
+                    'player/setCurrentMedia',
+                    'localStorage/addFolder',
+                    'localStorage/setLocalFiles',
+                    'localStorage/setScanningState',
+                    'playlist/setQueue',
+                    'playlist/setCurrentIndex',
+                    'player/setPlaying'
+                ],
                 // Ignore these field paths in all actions
-                ignoredActionPaths: ['payload.videoElement'],
+                ignoredActionPaths: [
+                    'payload.videoElement',
+                    'payload.handle',
+                    'payload.dirHandle',
+                    'payload.0.handle',
+                    'meta.arg.handle'
+                ],
                 // Ignore these paths in the state
-                ignoredPaths: ['player.currentMedia'],
+                ignoredPaths: [
+                    'player.currentMedia',
+                    'localStorage.folders',
+                    'localStorage.localFiles',
+                    'playlist.queue'
+                ],
             },
         }),
 });

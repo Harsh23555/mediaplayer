@@ -117,14 +117,18 @@ export async function requestLocalStoragePermission() {
  */
 export async function getLocalFileURL(fileHandle) {
     try {
+        // Prioritize backend streaming if a path is available (better seeking/buffering)
+        if (fileHandle.path) {
+            return mediaAPI.streamLocal(fileHandle.path);
+        }
+
+        // Fallback to File System Access API handle
         if (fileHandle.handle) {
             const file = await fileHandle.handle.getFile();
             return URL.createObjectURL(file);
-        } else if (fileHandle.path && fileHandle.source === 'local') {
-            // Use backend streaming for files without handles (e.g. from backend scan)
-            return mediaAPI.streamLocal(fileHandle.path);
         }
-        return null; // Or throw error
+
+        return null;
     } catch (err) {
         console.error('Error getting file URL:', err);
         throw err;
