@@ -37,7 +37,7 @@ const upload = multer({
         fileSize: parseInt(process.env.MAX_FILE_SIZE) || 500000000 // 500MB default
     },
     fileFilter: (req, file, cb) => {
-        const allowedExts = /mp4|webm|mkv|avi|mov|mp3|wav|flac|aac|ogg/;
+        const allowedExts = /mp4|webm|mkv|avi|mov|flv|wmv|mxf|3gp|mp3|wav|flac|aac|ogg/;
         const extname = allowedExts.test(path.extname(file.originalname).toLowerCase());
         const mimetype = allowedExts.test(file.mimetype);
 
