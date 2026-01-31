@@ -1,14 +1,23 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Search, Sun, Moon, Upload, Menu, X } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { useNavigate, NavLink } from 'react-router-dom';
 import { toggleTheme } from '../store/slices/themeSlice';
+import { logout } from '../store/slices/authSlice';
+import { LogOut, User as UserIcon } from 'lucide-react';
 
 const Header = () => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const { theme } = useSelector((state) => state.theme);
+    const { user } = useSelector((state) => state.auth);
     const [searchQuery, setSearchQuery] = useState('');
     const [mobileOpen, setMobileOpen] = useState(false);
+
+    const handleLogout = () => {
+        dispatch(logout());
+        navigate('/login');
+    };
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -58,7 +67,28 @@ const Header = () => {
 
             {/* Right: actions */}
             <div className="flex items-center gap-3">
-                {/* Upload button removed */}
+                {user ? (
+                    <div className="flex items-center gap-3">
+                        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10">
+                            <UserIcon className="w-4 h-4 text-accent-400" />
+                            <span className="text-sm font-medium text-gray-200">{user.name}</span>
+                        </div>
+                        <button
+                            onClick={handleLogout}
+                            className="p-2 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-all"
+                            title="Logout"
+                        >
+                            <LogOut className="w-5 h-5" />
+                        </button>
+                    </div>
+                ) : (
+                    <NavLink
+                        to="/login"
+                        className="px-4 py-2 bg-accent hover:bg-accent/90 text-white text-sm font-semibold rounded-lg transition-all shadow-lg shadow-accent/20"
+                    >
+                        Login
+                    </NavLink>
+                )}
 
                 <button
                     onClick={() => {

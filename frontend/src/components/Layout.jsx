@@ -5,8 +5,9 @@ import Header from './Header';
 const Layout = ({ children }) => {
     const location = useLocation();
     const isPlayerPage = location.pathname.startsWith('/player');
+    const isAuthPage = ['/login', '/register'].includes(location.pathname);
 
-    if (isPlayerPage) {
+    if (isPlayerPage || isAuthPage) {
         return <div className="h-screen w-full bg-bg overflow-hidden">{children}</div>;
     }
 

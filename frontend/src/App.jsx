@@ -6,11 +6,14 @@ import Layout from './components/Layout';
 import Home from './pages/Home';
 import Library from './pages/Library';
 import Playlists from './pages/Playlists';
+import PlaylistDetail from './pages/PlaylistDetail';
 import Downloads from './pages/Downloads';
 import Settings from './pages/Settings';
 import Player from './features/player/Player';
 import MiniPlayer from './features/player/MiniPlayer';
 import PlayerDemo from './pages/PlayerDemo';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import './styles/index.css';
 
 function App() {
@@ -23,10 +26,13 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/library" element={<Library />} />
               <Route path="/playlists" element={<Playlists />} />
+              <Route path="/playlists/:id" element={<PlaylistDetail />} />
               <Route path="/downloads" element={<Downloads />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/player/:id" element={<Player />} />
               <Route path="/demo" element={<PlayerDemo />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
             </Routes>
           </Layout>
           <MiniPlayer />

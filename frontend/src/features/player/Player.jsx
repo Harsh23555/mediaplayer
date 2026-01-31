@@ -23,7 +23,13 @@ import {
     RotateCcw,
 
     X,
-    Sliders
+    Sliders,
+    Info,
+    Globe,
+    Eye,
+    MessageSquare,
+    Subtitles,
+    ExternalLink
 } from 'lucide-react';
 import Equalizer from './Equalizer';
 import useAudioEqualizer from '../../hooks/useAudioEqualizer';
@@ -46,10 +52,11 @@ import {
     setCurrentIndex,
     addToQueue
 } from '../../store/slices/playlistSlice';
-import { mediaAPI } from '../../utils/api';
+import { mediaAPI, subtitleAPI } from '../../utils/api';
 import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
 import { formatTime } from '../../utils/helpers';
 import { getLocalFileURL } from '../../utils/localStorageUtils';
+import { addToRecentlyPlayed } from '../../store/slices/recentlyPlayedSlice';
 
 const Player = () => {
     const { id } = useParams();
@@ -91,6 +98,9 @@ const Player = () => {
     const [showEqualizer, setShowEqualizer] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [showMediaInfo, setShowMediaInfo] = useState(false);
+    const [isExtractingSubs, setIsExtractingSubs] = useState(false);
+    const [extractMsg, setExtractMsg] = useState('');
 
     const currentTrack = useMemo(() => {
         if (queue && queue.length > currentIndex && currentIndex >= 0) {
@@ -212,6 +222,7 @@ const Player = () => {
                         setError('Could not access media file.');
                     } else {
                         setCurrentMediaUrl(url);
+                        dispatch(addToRecentlyPlayed(currentTrack));
                         setError(null); // Clear error on success
                     }
                 }
@@ -369,6 +380,28 @@ const Player = () => {
 
     const playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
+    const handleExtractSubtitles = async () => {
+        if (!currentTrack?.id || currentTrack.source === 'local') return;
+        setIsExtractingSubs(true);
+        setExtractMsg('Extracting...');
+        try {
+            const { data } = await subtitleAPI.extract(currentTrack.id);
+            setExtractMsg(data.count > 0 ? `Success: ${data.count} found` : data.message);
+            // Refresh current track info
+            const response = await mediaAPI.getById(currentTrack.id);
+            const updatedMedia = { ...response.data, source: 'uploaded' };
+            // Update in queue
+            const newQueue = [...queue];
+            newQueue[currentIndex] = updatedMedia;
+            dispatch(setQueue(newQueue));
+        } catch (err) {
+            setExtractMsg('Failed: ' + (err.response?.data?.error || err.message));
+        } finally {
+            setIsExtractingSubs(false);
+            setTimeout(() => setExtractMsg(''), 5000);
+        }
+    };
+
     return (
         <div ref={containerRef} className={`relative w-full h-screen overflow-hidden bg-black select-none ${isDark ? 'dark' : ''} ${!showControls && isPlaying ? 'cursor-none' : 'cursor-default'}`}>
 
@@ -410,15 +443,23 @@ const Player = () => {
                                 {currentTrack?.title || 'Unknown Track'}
                             </h1>
                             <span className="text-gray-300 text-xs uppercase tracking-widest font-semibold opacity-60">
-                                {currentTrack?.artist || 'Unknown Artist'}
+                                {currentTrack?.metadata?.artist || currentTrack?.artist || 'Unknown Artist'}
                             </span>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2">
                         <button
+                            onClick={() => setShowMediaInfo(!showMediaInfo)}
+                            className={`p-3 rounded-full transition-all ${showMediaInfo ? 'bg-primary-600 text-white' : 'text-white hover:bg-white/10'}`}
+                            title="Media Info"
+                        >
+                            <Info className="w-6 h-6" />
+                        </button>
+                        <button
                             onClick={() => setShowPlaylist(!showPlaylist)}
                             className={`p-3 rounded-full transition-all ${showPlaylist ? 'bg-red-600 text-white' : 'text-white hover:bg-white/10'}`}
+                            title="Queue"
                         >
                             <ListMusic className="w-6 h-6" />
                         </button>
@@ -655,6 +696,133 @@ const Player = () => {
                 </footer>
             </div>
 
+            {/* Media Information Drawer */}
+            <AnimatePresence>
+                {showMediaInfo && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowMediaInfo(false)}
+                            className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ x: '100%' }}
+                            animate={{ x: 0 }}
+                            exit={{ x: '100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            className="absolute top-0 right-0 bottom-0 w-full max-w-md z-50 bg-[#0f0f0f] border-l border-white/10 flex flex-col shadow-2xl"
+                        >
+                            <div className="p-6 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-primary-900/20 to-transparent">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-primary-600/20 flex items-center justify-center">
+                                        <Info className="w-5 h-5 text-primary-400" />
+                                    </div>
+                                    <span className="text-lg font-bold text-white tracking-tight">Media Details</span>
+                                </div>
+                                <button onClick={() => setShowMediaInfo(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                                    <X className="w-6 h-6 text-white" />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                                {/* Thumbnail & Basic Info */}
+                                <div className="space-y-4">
+                                    {currentTrack?.thumbnail && (
+                                        <div className="aspect-video w-full rounded-2xl overflow-hidden shadow-lg border border-white/5 relative group">
+                                            <img src={currentTrack.thumbnail} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                        </div>
+                                    )}
+                                    <div>
+                                        <h2 className="text-xl font-bold text-white leading-tight">{currentTrack?.title}</h2>
+                                        <p className="text-primary-400 font-medium mt-1">{currentTrack?.metadata?.artist || currentTrack?.artist || 'Unknown Artist'}</p>
+                                    </div>
+                                </div>
+
+                                {/* Stats Grid */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 space-y-1">
+                                        <div className="flex items-center gap-2 text-gray-500 mb-1">
+                                            <Eye className="w-3.5 h-3.5" />
+                                            <span className="text-[10px] uppercase font-bold tracking-wider">Views</span>
+                                        </div>
+                                        <p className="text-white font-mono text-lg">{currentTrack?.metadata?.views?.toLocaleString() || 'N/A'}</p>
+                                    </div>
+                                    <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 space-y-1">
+                                        <div className="flex items-center gap-2 text-gray-500 mb-1">
+                                            <Globe className="w-3.5 h-3.5" />
+                                            <span className="text-[10px] uppercase font-bold tracking-wider">Format</span>
+                                        </div>
+                                        <p className="text-white font-mono text-lg uppercase">{currentTrack?.format || 'N/A'}</p>
+                                    </div>
+                                </div>
+
+                                {/* Description */}
+                                {currentTrack?.metadata?.description && (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2 text-gray-400">
+                                            <MessageSquare className="w-4 h-4" />
+                                            <span className="text-sm font-bold uppercase tracking-widest text-[11px]">Description</span>
+                                        </div>
+                                        <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                                            <p className="text-sm text-gray-400 leading-relaxed italic">
+                                                "{currentTrack.metadata.description}"
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Source Link */}
+                                {currentTrack?.metadata?.originalUrl && (
+                                    <a
+                                        href={currentTrack.metadata.originalUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-between p-4 rounded-2xl bg-primary-600/10 border border-primary-500/20 group hover:bg-primary-600/20 transition-all"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Globe className="w-5 h-5 text-primary-400" />
+                                            <span className="text-sm font-medium text-white">Original Source</span>
+                                        </div>
+                                        <ExternalLink className="w-4 h-4 text-primary-400 opacity-60 group-hover:opacity-100 transition-opacity" />
+                                    </a>
+                                )}
+
+                                {/* Subtitle Extraction */}
+                                {currentTrack?.source !== 'local' && (
+                                    <div className="pt-4 border-t border-white/10">
+                                        <div className="flex flex-col gap-4">
+                                            <button
+                                                onClick={handleExtractSubtitles}
+                                                disabled={isExtractingSubs}
+                                                className={`w-full flex items-center justify-center gap-3 p-4 rounded-2xl font-bold transition-all ${isExtractingSubs
+                                                    ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                                                    : 'bg-white text-black hover:bg-primary-500 hover:text-white shadow-lg'
+                                                    }`}
+                                            >
+                                                {isExtractingSubs ? (
+                                                    <div className="w-5 h-5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
+                                                ) : (
+                                                    <Subtitles className="w-5 h-5" />
+                                                )}
+                                                {isExtractingSubs ? 'Processing Subtitles...' : 'Extract Subtitles'}
+                                            </button>
+                                            {extractMsg && (
+                                                <p className="text-center text-xs font-medium text-primary-400 animate-pulse">
+                                                    {extractMsg}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
             {/* Playlist Drawer */}
             <AnimatePresence>
                 {showPlaylist && (
@@ -708,7 +876,7 @@ const Player = () => {
                         </motion.div>
                     </>
                 )}
-            </AnimatePresence>
+            </AnimatePresence >
 
             <style>{`
                 @keyframes float {
@@ -720,7 +888,6 @@ const Player = () => {
                 }
                 ::-webkit-scrollbar { width: 4px; }
                 ::-webkit-scrollbar-track { background: transparent; }
-                ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
             `}</style>
         </div>
     );

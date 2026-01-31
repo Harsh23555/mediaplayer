@@ -1,49 +1,44 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
-enum MediaType {
-  video
-  audio
-}
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-enum DownloadQuality {
-  fourk @map("4k")
-  oneK @map("1080p")
-  seventy @map("720p")
-  foureighty @map("480p")
-  audio
-}
+  media     Media[]
+  playlists Playlist[]
+  downloads Download[]
 
-enum DownloadStatus {
-  pending
-  downloading
-  paused
-  completed
-  failed
-  cancelled
+  @@map("users")
 }
 
 model Media {
   id        String   @id @default(cuid())
   title     String
-  type      MediaType
+  type      String
   filename  String
   path      String
   size      Int
   duration  Int      @default(0)
   format    String
   thumbnail String?
-  metadata  Json?
-  subtitles Json?
+  metadata  String?  // SQLite doesn't support Json type well, use String
+  subtitles String?  // SQLite doesn't support Json type well, use String
+  status    String   @default("ready")
+  category  String?
+  userId    String?  @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -58,6 +53,8 @@ model Playlist {
   description String?
   thumbnail   String?
   isPublic    Boolean  @default(false)
+  userId      String?  @map("user_id")
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -83,15 +80,19 @@ model Download {
   id             String           @id @default(cuid())
   url            String
   title          String           @default("Untitled")
-  type           MediaType        @default(video)
-  quality        DownloadQuality  @default(oneK)
-  status         DownloadStatus   @default(pending)
+  type           String           @default("video")
+  quality        String           @default("1080p")
+  status         String           @default("pending")
   progress       Int              @default(0)
   size           Int              @default(0)
   downloadedSize Int              @default(0)
   filePath       String?
   mediaId        String?          @map("media_id")
+  userId         String?          @map("user_id")
+  user           User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  category       String?
   error          String?
+  completedAt    DateTime?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 

@@ -45,7 +45,7 @@ const VideoUploader = ({ onUploadSuccess, isOpen, onClose }) => {
 
         setFiles((prev) => [...prev, ...validatedFiles]);
         setErrors((prev) => ({ ...prev, ...newErrors }));
-        
+
         // Reset file input
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -83,9 +83,7 @@ const VideoUploader = ({ onUploadSuccess, isOpen, onClose }) => {
         formData.append('file', file);
 
         try {
-            const response = await fetch('/api/media/upload', {
-                method: 'POST',
-                body: formData,
+            const response = await mediaAPI.upload(formData, {
                 onUploadProgress: (progressEvent) => {
                     const progress = Math.round(
                         (progressEvent.loaded / progressEvent.total) * 100
@@ -97,11 +95,6 @@ const VideoUploader = ({ onUploadSuccess, isOpen, onClose }) => {
                 }
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Upload failed');
-            }
-
             setCompleted((prev) => ({
                 ...prev,
                 [file.name]: true
@@ -109,9 +102,10 @@ const VideoUploader = ({ onUploadSuccess, isOpen, onClose }) => {
 
             return true;
         } catch (error) {
+            console.error('Upload error:', error);
             setErrors((prev) => ({
                 ...prev,
-                [file.name]: error.message
+                [file.name]: error.response?.data?.error || error.message || 'Upload failed'
             }));
             return false;
         }
@@ -182,11 +176,10 @@ const VideoUploader = ({ onUploadSuccess, isOpen, onClose }) => {
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
-                        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition ${
-                            dragOverRef.current
+                        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition ${dragOverRef.current
                                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900'
                                 : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
-                        }`}
+                            }`}
                     >
                         <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                         <p className="text-lg font-semibold mb-2 dark:text-white">

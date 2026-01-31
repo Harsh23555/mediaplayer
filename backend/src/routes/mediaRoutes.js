@@ -4,16 +4,22 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { prisma } from '../prisma.js';
+import auth from '../middleware/authMiddleware.js';
+import { processMediaMetadata } from '../utils/mediaProcessor.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
+// All routes require authentication
+router.use(auth);
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const uploadDir = path.join(__dirname, '../../uploads');
+        const userDir = req.userId || 'anonymous';
+        const uploadDir = path.join(__dirname, '../../uploads', userDir);
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
         }
@@ -43,12 +49,12 @@ const upload = multer({
     }
 });
 
-// Get all media
+// Get all media for current user
 router.get('/', async (req, res) => {
     try {
         const { type, search, sort = 'createdAt', limit = 50, page = 1 } = req.query;
 
-        const where = {};
+        const where = { userId: req.userId };
         if (type) where.type = type;
         if (search) {
             where.OR = [
@@ -82,15 +88,18 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Get media by ID
+// Get media by ID (must belong to user)
 router.get('/:id', async (req, res) => {
     try {
-        const media = await prisma.media.findUnique({
-            where: { id: req.params.id }
+        const media = await prisma.media.findFirst({
+            where: {
+                id: req.params.id,
+                userId: req.userId
+            }
         });
 
         if (!media) {
-            return res.status(404).json({ error: 'Media not found' });
+            return res.status(404).json({ error: 'Media not found or unauthorized' });
         }
 
         res.json(media);
@@ -122,24 +131,51 @@ router.post('/upload', (req, res, next) => {
         // Determine file type based on mimetype
         const fileType = type || (req.file.mimetype.startsWith('audio') ? 'audio' : 'video');
 
-        console.log(`Uploading file: ${req.file.originalname}, type: ${fileType}`);
+        console.log(`Uploading file: ${req.file.originalname}, type: ${fileType}, user: ${req.userId}`);
 
         const media = await prisma.media.create({
             data: {
                 title: title || req.file.originalname,
-                type: fileType.toLowerCase(), // Ensure it matches enum values
+                type: fileType.toLowerCase(),
                 filename: req.file.filename,
                 path: req.file.path,
                 size: req.file.size,
-                format: path.extname(req.file.originalname).substring(1).toLowerCase()
+                format: path.extname(req.file.originalname).substring(1).toLowerCase(),
+                userId: req.userId,
+                status: 'processing'
             }
         });
+
+        // Process file in background to extract metadata/thumbnails
+        processMediaMetadata(req.file.path, fileType.toLowerCase())
+            .then(async (metadata) => {
+                await prisma.media.update({
+                    where: { id: media.id },
+                    data: {
+                        duration: metadata.duration || 0,
+                        thumbnail: metadata.thumbnail || null,
+                        category: metadata.category || null,
+                        status: 'ready',
+                        metadata: JSON.stringify({
+                            artist: metadata.artist || null,
+                            album: metadata.album || null
+                        })
+                    }
+                });
+                console.log(`✓ Metadata and category (${metadata.category}) processed for: ${req.file.originalname}`);
+            })
+            .catch(async (err) => {
+                console.error('Metadata processing error:', err);
+                await prisma.media.update({
+                    where: { id: media.id },
+                    data: { status: 'error' }
+                });
+            });
 
         console.log(`✓ File uploaded successfully: ${req.file.originalname} (${req.file.size} bytes)`);
         res.status(201).json(media);
     } catch (error) {
         console.error('Media save error:', error.message);
-        console.error('Error details:', error);
         res.status(500).json({ error: `Server error: ${error.message}` });
     }
 });
@@ -147,42 +183,33 @@ router.post('/upload', (req, res, next) => {
 // Stream media
 router.get('/:id/stream', async (req, res) => {
     try {
-        const media = await prisma.media.findUnique({
-            where: { id: req.params.id }
+        const media = await prisma.media.findFirst({
+            where: {
+                id: req.params.id,
+                userId: req.userId
+            }
         });
 
         if (!media) {
-            return res.status(404).json({ error: 'Media not found' });
+            return res.status(404).json({ error: 'Media not found or unauthorized' });
         }
 
         const filePath = media.path;
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ error: 'Source file not found' });
+        }
+
         const stat = fs.statSync(filePath);
         const fileSize = stat.size;
         const range = req.headers.range;
 
         const ext = path.extname(filePath).toLowerCase().replace('.', '');
         const mimeTypes = {
-            mp4: 'video/mp4',
-            webm: 'video/webm',
-            mov: 'video/quicktime',
-            avi: 'video/x-msvideo',
-            mkv: 'video/x-matroska',
-            flv: 'video/x-flv',
-            wmv: 'video/x-ms-wmv',
-            ogv: 'video/ogg',
-            m4v: 'video/x-m4v',
-            '3gp': 'video/3gpp',
-            mxf: 'application/mxf',
-            mp3: 'audio/mpeg',
-            wav: 'audio/wav',
-            aac: 'audio/aac',
-            m4a: 'audio/mp4',
-            flac: 'audio/flac',
-            ogg: 'audio/ogg',
-            wma: 'audio/x-ms-wma',
-            opus: 'audio/opus',
-            ape: 'audio/x-ape',
-            aiff: 'audio/x-aiff'
+            mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', avi: 'video/x-msvideo',
+            mkv: 'video/x-matroska', flv: 'video/x-flv', wmv: 'video/x-ms-wmv', ogv: 'video/ogg',
+            m4v: 'video/x-m4v', '3gp': 'video/3gpp', mp3: 'audio/mpeg', wav: 'audio/wav',
+            aac: 'audio/aac', m4a: 'audio/mp4', flac: 'audio/flac', ogg: 'audio/ogg',
+            wma: 'audio/x-ms-wma', opus: 'audio/opus', ape: 'audio/x-ape', aiff: 'audio/x-aiff'
         };
         const contentType = mimeTypes[ext] || 'video/mp4';
 
@@ -213,16 +240,21 @@ router.get('/:id/stream', async (req, res) => {
 // Update media
 router.put('/:id', async (req, res) => {
     try {
-        const media = await prisma.media.update({
+        const media = await prisma.media.findFirst({
+            where: { id: req.params.id, userId: req.userId }
+        });
+
+        if (!media) {
+            return res.status(404).json({ error: 'Media not found or unauthorized' });
+        }
+
+        const updated = await prisma.media.update({
             where: { id: req.params.id },
             data: req.body
         });
 
-        res.json(media);
+        res.json(updated);
     } catch (error) {
-        if (error.code === 'P2025') {
-            return res.status(404).json({ error: 'Media not found' });
-        }
         res.status(500).json({ error: error.message });
     }
 });
@@ -230,12 +262,12 @@ router.put('/:id', async (req, res) => {
 // Delete media
 router.delete('/:id', async (req, res) => {
     try {
-        const media = await prisma.media.findUnique({
-            where: { id: req.params.id }
+        const media = await prisma.media.findFirst({
+            where: { id: req.params.id, userId: req.userId }
         });
 
         if (!media) {
-            return res.status(404).json({ error: 'Media not found' });
+            return res.status(404).json({ error: 'Media not found or unauthorized' });
         }
 
         // Delete the file from disk

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Download, Pause, Play, X, Trash2, Link as LinkIcon } from 'lucide-react';
+import { Download, Pause, Play, X, Trash2, Link as LinkIcon, Video, Music } from 'lucide-react';
 import { setDownloads, addDownload, pauseDownload, resumeDownload, cancelDownload, removeDownload } from '../store/slices/downloadSlice';
 import { setPlaying } from '../store/slices/playerSlice';
 import { setQueue, setCurrentIndex } from '../store/slices/playlistSlice';
@@ -102,9 +102,14 @@ const Downloads = () => {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold text-gray-100">
-                    Downloads
-                </h1>
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-100">
+                        Downloads
+                    </h1>
+                    <p className="text-sm text-gray-400 mt-1">
+                        Files are saved to your system's <span className="text-primary-400">Downloads/MediaPlayer</span> folder
+                    </p>
+                </div>
                 <div className="flex items-center gap-3">
                     {downloads.some(d => d.status === 'completed' || d.status === 'failed' || d.status === 'cancelled') && (
                         <button
@@ -210,7 +215,11 @@ const Downloads = () => {
                             >
                                 {/* Icon */}
                                 <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <Download className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+                                    {download.type === 'video' ? (
+                                        <Video className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+                                    ) : (
+                                        <Music className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+                                    )}
                                 </div>
 
                                 {/* Info */}
@@ -249,7 +258,14 @@ const Downloads = () => {
                                 <div className="flex items-center gap-2">
                                     {download.status === 'downloading' && (
                                         <button
-                                            onClick={() => dispatch(pauseDownload(download.id))}
+                                            onClick={async () => {
+                                                try {
+                                                    await downloadAPI.pause(download.id);
+                                                    fetchDownloads();
+                                                } catch (err) {
+                                                    console.error('Failed to pause:', err);
+                                                }
+                                            }}
                                             className="p-2 hover:bg-gray-200 dark:hover:bg-dark-600 rounded-lg"
                                         >
                                             <Pause className="w-5 h-5" />
@@ -257,7 +273,14 @@ const Downloads = () => {
                                     )}
                                     {download.status === 'paused' && (
                                         <button
-                                            onClick={() => dispatch(resumeDownload(download.id))}
+                                            onClick={async () => {
+                                                try {
+                                                    await downloadAPI.resume(download.id);
+                                                    fetchDownloads();
+                                                } catch (err) {
+                                                    console.error('Failed to resume:', err);
+                                                }
+                                            }}
                                             className="p-2 hover:bg-gray-200 dark:hover:bg-dark-600 rounded-lg"
                                         >
                                             <Play className="w-5 h-5" />
@@ -265,7 +288,14 @@ const Downloads = () => {
                                     )}
                                     {(download.status === 'downloading' || download.status === 'paused') && (
                                         <button
-                                            onClick={() => dispatch(cancelDownload(download.id))}
+                                            onClick={async () => {
+                                                try {
+                                                    await downloadAPI.remove(download.id);
+                                                    fetchDownloads();
+                                                } catch (err) {
+                                                    console.error('Failed to cancel:', err);
+                                                }
+                                            }}
                                             className="p-2 hover:bg-gray-200 dark:hover:bg-dark-600 rounded-lg text-red-600"
                                         >
                                             <X className="w-5 h-5" />

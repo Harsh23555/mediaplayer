@@ -12,6 +12,7 @@ import mediaRoutes from './routes/mediaRoutes.js';
 import playlistRoutes from './routes/playlistRoutes.js';
 import downloadRoutes from './routes/downloadRoutes.js';
 import subtitleRoutes from './routes/subtitleRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -42,15 +43,15 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/downloads/file', express.static(path.join(os.homedir(), 'Downloads', 'MediaPlayer')));
 
 // Routes
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', message: 'Media Player API is running' });
+});
+
+app.use('/api/auth', authRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/playlists', playlistRoutes);
 app.use('/api/downloads', downloadRoutes);
 app.use('/api/subtitles', subtitleRoutes);
-
-// Health check
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', message: 'Media Player API is running' });
-});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -68,9 +69,9 @@ const connectDB = async () => {
     try {
         // Test the connection
         await prisma.$queryRaw`SELECT 1`;
-        console.log('✓ PostgreSQL (Neon) connected successfully');
+        console.log('✓ SQLite database connected successfully');
     } catch (error) {
-        console.error('✗ PostgreSQL connection error:', error.message);
+        console.error('✗ SQLite connection error:', error.message);
         console.log('⚠ Continuing without database connection');
     }
 };
@@ -86,7 +87,7 @@ const startServer = async () => {
         console.log(`✓ Environment: ${process.env.NODE_ENV}`);
         console.log(`✓ API URL: http://localhost:${PORT}/api`);
         console.log(`✓ Health check: http://localhost:${PORT}/api/health`);
-        console.log(`✓ Database: PostgreSQL (Neon)`);
+        console.log(`✓ Database: SQLite (local)`);
         console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
     });
 };

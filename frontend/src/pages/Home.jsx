@@ -3,16 +3,22 @@ import { Play, Music, Video, TrendingUp } from 'lucide-react';
 
 import { mediaAPI, playlistAPI, downloadAPI } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { addToRecentlyPlayed, clearRecentlyPlayed } from '../store/slices/recentlyPlayedSlice';
+import { setQueue, setCurrentIndex } from '../store/slices/playlistSlice';
+import { setPlaying } from '../store/slices/playerSlice';
+import { MediaCard } from '../components/MediaCard';
 
 const Home = () => {
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const { items: recentlyPlayed } = useSelector(state => state.recentlyPlayed);
     const [counts, setCounts] = React.useState({
         media: 0,
         playlists: 0,
         downloads: 0,
         recentlyPlayed: 0
     });
-
-    const navigate = useNavigate();
 
     React.useEffect(() => {
         const fetchStats = async () => {
@@ -27,7 +33,7 @@ const Home = () => {
                     media: mediaRes.data?.data?.length || 0,
                     playlists: playlistRes.data?.length || 0,
                     downloads: downloadRes.data?.filter(d => d.status === 'completed').length || 0,
-                    recentlyPlayed: 0 // Placeholder
+                    recentlyPlayed: recentlyPlayed.length
                 });
             } catch (err) {
                 console.error('Error fetching home stats:', err);
@@ -135,14 +141,43 @@ const Home = () => {
 
             {/* Recently Played */}
             <div className="card p-6">
-                <h2 className="text-2xl font-bold text-gray-100 mb-4">
-                    Recently Played
-                </h2>
-                <div className="text-center py-12 text-gray-400">
-                    <Music className="w-16 h-16 mx-auto mb-4" />
-                    <p className="text-gray-100">No recently played media</p>
-                    <p className="text-sm mt-2 text-gray-400">Start playing some music or videos!</p>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-bold text-gray-100">
+                        Recently Played
+                    </h2>
+                    {recentlyPlayed.length > 0 && (
+                        <button
+                            onClick={() => dispatch(clearRecentlyPlayed())}
+                            className="text-xs text-red-400 hover:text-red-300 font-bold uppercase tracking-widest"
+                        >
+                            Clear History
+                        </button>
+                    )}
                 </div>
+
+                {recentlyPlayed.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        {recentlyPlayed.map((item) => (
+                            <MediaCard
+                                key={item.id}
+                                file={item}
+                                onPlay={(file) => {
+                                    dispatch(setQueue([file]));
+                                    dispatch(setCurrentIndex(0));
+                                    dispatch(setPlaying(true));
+                                    navigate(`/player/${file.id}`);
+                                }}
+                                onDelete={() => { }} // Remove hide delete for recent?
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-12 text-gray-400">
+                        <Music className="w-16 h-16 mx-auto mb-4" />
+                        <p className="text-gray-100 font-medium">No recently played media</p>
+                        <p className="text-sm mt-2 text-gray-400">Start playing some music or videos!</p>
+                    </div>
+                )}
             </div>
         </div>
     );

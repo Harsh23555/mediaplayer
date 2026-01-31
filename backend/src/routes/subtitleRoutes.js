@@ -1,6 +1,10 @@
 import express from 'express';
+import auth from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+
+// All routes require authentication
+router.use(auth);
 
 // Extract subtitles from video
 router.post('/extract', async (req, res) => {
@@ -12,7 +16,7 @@ router.post('/extract', async (req, res) => {
         }
 
         import('../services/subtitleService.js').then(async module => {
-            const result = await module.default.extract(videoId);
+            const result = await module.default.extract(videoId, req.userId);
             res.json(result);
         }).catch(err => {
             console.error(err);
@@ -35,7 +39,7 @@ router.post('/translate', async (req, res) => {
 
         import('../services/subtitleService.js').then(async module => {
             try {
-                const result = await module.default.translate(subtitleId, targetLang);
+                const result = await module.default.translate(subtitleId, targetLang, req.userId);
                 res.json(result);
             } catch (e) {
                 res.status(501).json({ error: e.message }); // 501 Not Implemented
@@ -51,12 +55,12 @@ router.post('/translate', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         import('../services/subtitleService.js').then(async module => {
-            const content = await module.default.getSubtitleContent(req.params.id);
+            const content = await module.default.getSubtitleContent(req.params.id, req.userId);
             // Determine content type - assuming VTT
             res.setHeader('Content-Type', 'text/vtt');
             res.send(content);
         }).catch(err => {
-            if (err.message === 'Subtitle not found') return res.status(404).json({ error: err.message });
+            if (err.message.includes('not found')) return res.status(404).json({ error: err.message });
             res.status(500).json({ error: err.message });
         });
     } catch (error) {

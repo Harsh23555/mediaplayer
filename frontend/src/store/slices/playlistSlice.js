@@ -1,4 +1,65 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { playlistAPI } from '../../utils/api';
+
+export const fetchPlaylists = createAsyncThunk(
+    'playlist/fetchPlaylists',
+    async (_, { rejectWithValue }) => {
+        try {
+            const response = await playlistAPI.getAll();
+            return response.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.error || 'Failed to fetch playlists');
+        }
+    }
+);
+
+export const createPlaylist = createAsyncThunk(
+    'playlist/createPlaylist',
+    async (playlistData, { rejectWithValue }) => {
+        try {
+            const response = await playlistAPI.create(playlistData);
+            return response.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.error || 'Failed to create playlist');
+        }
+    }
+);
+
+export const deletePlaylist = createAsyncThunk(
+    'playlist/deletePlaylist',
+    async (id, { rejectWithValue }) => {
+        try {
+            await playlistAPI.delete(id);
+            return id;
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.error || 'Failed to delete playlist');
+        }
+    }
+);
+
+export const addMediaToPlaylist = createAsyncThunk(
+    'playlist/addMediaToPlaylist',
+    async ({ playlistId, mediaId }, { rejectWithValue }) => {
+        try {
+            const response = await playlistAPI.addItem(playlistId, mediaId);
+            return response.data; // Returns updated playlist
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.error || 'Failed to add item to playlist');
+        }
+    }
+);
+
+export const removeMediaFromPlaylist = createAsyncThunk(
+    'playlist/removeMediaFromPlaylist',
+    async ({ playlistId, itemId }, { rejectWithValue }) => {
+        try {
+            const response = await playlistAPI.removeItem(playlistId, itemId);
+            return response.data; // Returns updated playlist
+        } catch (err) {
+            return rejectWithValue(err.response?.data?.error || 'Failed to remove item from playlist');
+        }
+    }
+);
 
 const initialState = {
     playlists: [],
@@ -7,30 +68,14 @@ const initialState = {
     currentIndex: 0,
     shuffle: false,
     repeat: 'none', // 'none', 'all', 'one'
+    loading: false,
+    error: null
 };
 
 const playlistSlice = createSlice({
     name: 'playlist',
     initialState,
     reducers: {
-        setPlaylists: (state, action) => {
-            state.playlists = action.payload;
-        },
-        addPlaylist: (state, action) => {
-            state.playlists.push(action.payload);
-        },
-        updatePlaylist: (state, action) => {
-            const index = state.playlists.findIndex(p => p.id === action.payload.id);
-            if (index !== -1) {
-                state.playlists[index] = action.payload;
-            }
-        },
-        deletePlaylist: (state, action) => {
-            state.playlists = state.playlists.filter(p => p.id !== action.payload);
-        },
-        setCurrentPlaylist: (state, action) => {
-            state.currentPlaylist = action.payload;
-        },
         setQueue: (state, action) => {
             state.queue = action.payload;
         },
@@ -74,14 +119,45 @@ const playlistSlice = createSlice({
             state.currentIndex = 0;
         },
     },
+    extraReducers: (builder) => {
+        builder
+            // Fetch Playlists
+            .addCase(fetchPlaylists.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(fetchPlaylists.fulfilled, (state, action) => {
+                state.loading = false;
+                state.playlists = action.payload;
+            })
+            .addCase(fetchPlaylists.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+            // Create Playlist
+            .addCase(createPlaylist.fulfilled, (state, action) => {
+                state.playlists.unshift(action.payload);
+            })
+            // Delete Playlist
+            .addCase(deletePlaylist.fulfilled, (state, action) => {
+                state.playlists = state.playlists.filter(p => p.id !== action.payload);
+            })
+            // Add/Remove Items (Updates the playlist in the list)
+            .addMatcher(
+                (action) => [addMediaToPlaylist.fulfilled.type, removeMediaFromPlaylist.fulfilled.type].includes(action.type),
+                (state, action) => {
+                    const index = state.playlists.findIndex(p => p.id === action.payload.id);
+                    if (index !== -1) {
+                        state.playlists[index] = action.payload;
+                    }
+                    if (state.currentPlaylist?.id === action.payload.id) {
+                        state.currentPlaylist = action.payload;
+                    }
+                }
+            );
+    }
 });
 
 export const {
-    setPlaylists,
-    addPlaylist,
-    updatePlaylist,
-    deletePlaylist,
-    setCurrentPlaylist,
     setQueue,
     addToQueue,
     removeFromQueue,

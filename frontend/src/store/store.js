@@ -4,6 +4,8 @@ import playlistReducer from './slices/playlistSlice';
 import downloadReducer from './slices/downloadSlice';
 import themeReducer from './slices/themeSlice';
 import localStorageReducer from './slices/localStorageSlice';
+import recentlyPlayedReducer from './slices/recentlyPlayedSlice';
+import authReducer from './slices/authSlice';
 
 export const store = configureStore({
     reducer: {
@@ -12,6 +14,8 @@ export const store = configureStore({
         downloads: downloadReducer,
         theme: themeReducer,
         localStorage: localStorageReducer,
+        recentlyPlayed: recentlyPlayedReducer,
+        auth: authReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
