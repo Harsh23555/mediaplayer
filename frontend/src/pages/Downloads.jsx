@@ -46,23 +46,29 @@ const Downloads = () => {
     const handleAddDownload = async (e) => {
         e.preventDefault();
         try {
-            // Determine type based on quality selection
+            // 1. Register download in backend history (mode='browser' skips server-side download)
             const downloadType = quality === 'audio' ? 'audio' : 'video';
-
-            const { data } = await downloadAPI.initiate({
+            await downloadAPI.initiate({
                 url: downloadUrl,
                 quality,
-                type: downloadType
+                type: downloadType,
+                mode: 'browser',
+                title: 'Browser Download' // Optional, could parse or ask user
             });
 
-            // Refresh the list immediately
-            fetchDownloads();
+            // 2. Trigger actual download in browser
+            const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+            const directUrl = `${API_BASE}/downloads/stream-direct?url=${encodeURIComponent(downloadUrl)}`;
+            window.open(directUrl, '_blank');
 
+            // 3. Update UI
+            fetchDownloads();
             setShowAddDialog(false);
             setDownloadUrl('');
         } catch (error) {
-            console.error('Download failed:', error);
-            alert('Failed to start download: ' + (error.response?.data?.error || error.message));
+            console.error('Download registration failed:', error);
+            // Even if registration fails, try to download? No, better to alert.
+            alert('Failed to start download');
         }
     };
 

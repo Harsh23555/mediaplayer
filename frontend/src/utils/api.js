@@ -13,7 +13,7 @@ const api = axios.create({
 api.interceptors.request.use(
     (config) => {
         // Add auth token if available
-        const token = localStorage.getItem('authToken');
+        const token = localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -30,7 +30,8 @@ api.interceptors.response.use(
     (error) => {
         if (error.response?.status === 401) {
             // Handle unauthorized access
-            localStorage.removeItem('authToken');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
             window.location.href = '/login';
         }
         return Promise.reject(error);
@@ -42,7 +43,7 @@ export const mediaAPI = {
     getAll: () => api.get('/media'),
     getById: (id) => api.get(`/media/${id}`),
     upload: (formData) => api.post('/media/upload', formData, {
-        headers: { 
+        headers: {
             'Content-Type': 'multipart/form-data',
         },
     }),
@@ -66,6 +67,7 @@ export const downloadAPI = {
     pause: (id) => api.post(`/downloads/${id}/pause`),
     resume: (id) => api.post(`/downloads/${id}/resume`),
     cancel: (id) => api.delete(`/downloads/${id}`),
+    remove: (id) => api.delete(`/downloads/${id}`),
     getAll: () => api.get('/downloads'),
 };
 
